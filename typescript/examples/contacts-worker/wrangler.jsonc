@@ -1,0 +1,12 @@
+{
+  "$schema": "../../node_modules/wrangler/config-schema.json",
+  "name": "eeao-contacts-example",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-11-01",
+  // No nodejs_compat: the Worker uses Web APIs only.
+  "analytics_engine_datasets": [{ "binding": "ANALYTICS", "dataset": "eeao_contacts_events" }],
+  "vars": {
+    // Example tokens for local dev only. Use `wrangler secret put API_TOKENS` for real ones.
+    "API_TOKENS": "{\"t-alice\":{\"id\":\"u-alice\",\"orgId\":\"o1\",\"role\":\"admin\"},\"t-bob\":{\"id\":\"u-bob\",\"orgId\":\"o1\",\"role\":\"member\"}}"
+  }
+}

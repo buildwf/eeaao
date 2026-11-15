@@ -1,0 +1,448 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>eeao devtools</title>
+<style>
+/* Layout: top bar with three views; each view is a list on the left and the selected item's journey on the right. */
+:root {
+  --bg: #f6f7f9; --panel: #ffffff; --sunken: #eef0f4; --line: #dde1e8; --fg: #1b2230; --muted: #5f6b7d; --faint: #98a2b3;
+  --accent: #0b6e78; --accent-soft: #dff1f2;
+  --ok: #1d7a46; --ok-soft: #e1f3e8; --bad: #b42318; --bad-soft: #fde7e5; --warn: #a15c07; --warn-soft: #fdf0d9; --off: #6b7280; --off-soft: #eceef2;
+  --user: #0b6e78; --user-fg: #ffffff;
+  --mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+  --sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #0f131a; --panel: #151a23; --sunken: #1b212c; --line: #283041; --fg: #e3e8f0; --muted: #9aa5b6; --faint: #657084;
+  --accent: #4cc2cc; --accent-soft: #123238;
+  --ok: #4ccf86; --ok-soft: #12301f; --bad: #ff7a6b; --bad-soft: #3a1714; --warn: #f2b14c; --warn-soft: #36270d; --off: #8a94a6; --off-soft: #222937;
+  --user: #1d5f66; --user-fg: #f1fbfc; color-scheme: dark; } }
+:root[data-theme="dark"] {
+  --bg: #0f131a; --panel: #151a23; --sunken: #1b212c; --line: #283041; --fg: #e3e8f0; --muted: #9aa5b6; --faint: #657084;
+  --accent: #4cc2cc; --accent-soft: #123238;
+  --ok: #4ccf86; --ok-soft: #12301f; --bad: #ff7a6b; --bad-soft: #3a1714; --warn: #f2b14c; --warn-soft: #36270d; --off: #8a94a6; --off-soft: #222937;
+  --user: #1d5f66; --user-fg: #f1fbfc; color-scheme: dark; }
+* { box-sizing: border-box; }
+html, body { height: 100%; margin: 0; }
+body { background: var(--bg); color: var(--fg); font: 13px/1.45 var(--sans); display: flex; flex-direction: column; }
+button { font: inherit; color: inherit; }
+button:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.mono { font-family: var(--mono); font-size: 12px; }
+header { display: flex; align-items: center; gap: 18px; padding: 0 16px; height: 46px; border-bottom: 1px solid var(--line); background: var(--panel); flex: none; }
+.brand { font-weight: 650; letter-spacing: .01em; display: flex; gap: 8px; align-items: baseline; }
+.brand small { color: var(--muted); font-weight: 400; }
+nav { display: flex; gap: 2px; height: 100%; }
+nav button { border: 0; background: none; padding: 0 12px; height: 100%; cursor: pointer; color: var(--muted); border-bottom: 2px solid transparent; display: flex; align-items: center; gap: 6px; }
+nav button[aria-selected="true"] { color: var(--fg); border-bottom-color: var(--accent); font-weight: 600; }
+nav .count { font-size: 11px; background: var(--sunken); border-radius: 8px; padding: 0 6px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.spacer { flex: 1; }
+.live { display: flex; align-items: center; gap: 6px; color: var(--muted); font-size: 12px; }
+.live i { width: 7px; height: 7px; border-radius: 50%; background: var(--ok); }
+.live.down i { background: var(--bad); }
+.ghost { border: 1px solid var(--line); background: var(--panel); border-radius: 6px; padding: 3px 10px; cursor: pointer; color: var(--muted); }
+.ghost:hover { color: var(--fg); }
+main { flex: 1; display: grid; grid-template-columns: minmax(300px, 40%) 1fr; min-height: 0; }
+.list { border-right: 1px solid var(--line); overflow: auto; background: var(--panel); min-width: 0; }
+.detail { overflow: auto; padding: 18px 22px 40px; min-width: 0; }
+.filters { position: sticky; top: 0; z-index: 2; background: var(--panel); border-bottom: 1px solid var(--line); padding: 8px 10px; display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+.filters button { border: 1px solid var(--line); background: var(--panel); border-radius: 12px; padding: 1px 9px; cursor: pointer; color: var(--muted); font-size: 12px; }
+.filters button[aria-pressed="true"] { background: var(--accent-soft); border-color: var(--accent); color: var(--fg); }
+.filters input { flex: 1; min-width: 120px; border: 1px solid var(--line); border-radius: 6px; padding: 3px 8px; background: var(--bg); color: var(--fg); font: inherit; }
+.row { display: grid; grid-template-columns: 58px 44px 1fr auto; gap: 8px; align-items: center; padding: 6px 10px; border-bottom: 1px solid var(--line); cursor: pointer; }
+.row:hover { background: var(--sunken); }
+.row[aria-selected="true"] { background: var(--accent-soft); }
+.row .t { color: var(--faint); font-family: var(--mono); font-size: 11px; font-variant-numeric: tabular-nums; }
+.row .name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.row .name .sub { color: var(--muted); }
+.row .right { display: flex; gap: 8px; align-items: center; font-variant-numeric: tabular-nums; }
+.row .ms { color: var(--faint); font-size: 11px; width: 42px; text-align: right; font-family: var(--mono); }
+.pill { display: inline-block; font-size: 10.5px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; padding: 1px 6px; border-radius: 4px; background: var(--sunken); color: var(--muted); text-align: center; }
+.pill.http { background: var(--accent-soft); color: var(--accent); }
+.pill.cli { background: var(--off-soft); color: var(--fg); }
+.pill.mcp { background: var(--warn-soft); color: var(--warn); }
+.pill.ai, .pill.llm { background: var(--ok-soft); color: var(--ok); }
+.status { font-family: var(--mono); font-size: 12px; font-weight: 600; }
+.s2 { color: var(--ok); } .s4 { color: var(--warn); } .s5, .serr { color: var(--bad); }
+.dots { display: inline-flex; gap: 2px; }
+.dots i { width: 7px; height: 7px; border-radius: 2px; background: var(--line); }
+.dots i.pass { background: var(--ok); } .dots i.fail { background: var(--bad); } .dots i.off { background: var(--faint); opacity: .55; } .dots i.unreached { background: transparent; box-shadow: inset 0 0 0 1px var(--line); }
+h1 { font-size: 17px; margin: 0 0 4px; font-weight: 650; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; text-wrap: balance; }
+h2 { font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin: 22px 0 8px; font-weight: 600; }
+.meta { color: var(--muted); display: flex; gap: 14px; flex-wrap: wrap; }
+.empty { color: var(--muted); padding: 40px 24px; max-width: 46ch; }
+.empty code { font-family: var(--mono); background: var(--sunken); padding: 1px 4px; border-radius: 3px; }
+/* the journey */
+.journey { border: 1px solid var(--line); border-radius: 8px; background: var(--panel); overflow: hidden; }
+.journey .jhead { display: flex; gap: 10px; align-items: center; padding: 8px 12px; border-bottom: 1px solid var(--line); background: var(--sunken); flex-wrap: wrap; }
+.step { display: grid; grid-template-columns: 22px 128px minmax(0, 1fr) 46px; gap: 10px; padding: 7px 12px; align-items: start; position: relative; }
+.step + .step { border-top: 1px dashed var(--line); }
+.step .ic { width: 18px; height: 18px; border-radius: 50%; display: grid; place-items: center; font-size: 11px; font-weight: 700; margin-top: 1px; }
+.step.pass .ic { background: var(--ok-soft); color: var(--ok); }
+.step.fail .ic { background: var(--bad-soft); color: var(--bad); }
+.step.off .ic { background: var(--off-soft); color: var(--off); }
+.step.unreached .ic { box-shadow: inset 0 0 0 1.5px var(--line); color: var(--faint); }
+.step.unreached { color: var(--faint); }
+.step.fail { background: var(--bad-soft); }
+.step .lbl { font-weight: 600; }
+.step .dec { font-family: var(--mono); font-size: 12px; overflow-wrap: anywhere; }
+.step .det { color: var(--muted); overflow-wrap: anywhere; }
+.step.fail .det { color: var(--bad); }
+.step .ms { color: var(--faint); font-family: var(--mono); font-size: 11px; text-align: right; }
+.gate { display: flex; gap: 8px; align-items: center; padding: 7px 12px; border-bottom: 1px solid var(--line); }
+pre.json { margin: 0; font-family: var(--mono); font-size: 12px; background: var(--sunken); border: 1px solid var(--line); border-radius: 6px; padding: 10px 12px; overflow: auto; max-height: 420px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.k { color: var(--accent); } .str { color: var(--ok); } .num { color: var(--warn); } .lit { color: var(--bad); }
+.kv { display: grid; grid-template-columns: max-content 1fr; gap: 2px 14px; font-family: var(--mono); font-size: 12px; }
+.kv dt { color: var(--muted); } .kv dd { margin: 0; overflow-wrap: anywhere; }
+.two { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.two > * { min-width: 0; }
+table.tools { border-collapse: collapse; width: 100%; }
+table.tools td, table.tools th { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+table.tools th { font-size: 11px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: .06em; }
+.badge { display: inline-block; font-size: 11px; padding: 0 6px; border-radius: 4px; border: 1px solid currentColor; margin-right: 4px; white-space: nowrap; }
+.badge.read { color: var(--ok); } .badge.write { color: var(--warn); } .badge.destructive { color: var(--bad); } .badge.plain { color: var(--muted); }
+details > summary { cursor: pointer; color: var(--muted); }
+/* chat */
+.chat { display: flex; flex-direction: column; gap: 12px; max-width: 760px; }
+.msg { max-width: 82%; padding: 9px 12px; border-radius: 10px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.msg.user { align-self: flex-end; background: var(--user); color: var(--user-fg); border-bottom-right-radius: 3px; }
+.msg.assistant { align-self: flex-start; background: var(--panel); border: 1px solid var(--line); border-bottom-left-radius: 3px; }
+.who { font-size: 11px; color: var(--faint); margin-bottom: -8px; }
+.who.user { align-self: flex-end; }
+.turn { align-self: stretch; display: flex; align-items: center; gap: 8px; color: var(--faint); font-size: 11px; font-family: var(--mono); }
+.turn::before, .turn::after { content: ""; height: 1px; background: var(--line); flex: 1; }
+.tool { align-self: flex-start; width: min(100%, 640px); border: 1px solid var(--line); border-radius: 8px; background: var(--panel); overflow: hidden; }
+.tool.waiting { border-color: var(--warn); }
+.tool.err { border-color: var(--bad); }
+.tool .th { display: flex; gap: 8px; align-items: center; padding: 7px 10px; background: var(--sunken); border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+.tool .th b { font-family: var(--mono); font-size: 12.5px; }
+.tool .tb { padding: 8px 10px; display: grid; gap: 8px; }
+.tool .tb pre.json { max-height: 200px; }
+.chip { font-size: 11px; padding: 1px 7px; border-radius: 10px; font-weight: 600; }
+.chip.auto { background: var(--off-soft); color: var(--muted); }
+.chip.wait { background: var(--warn-soft); color: var(--warn); }
+.chip.ok { background: var(--ok-soft); color: var(--ok); }
+.chip.bad { background: var(--bad-soft); color: var(--bad); }
+.gates { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; font-size: 12px; color: var(--muted); }
+.sys { font-size: 12px; color: var(--muted); white-space: pre-wrap; border-left: 2px solid var(--line); padding-left: 10px; }
+.offered { display: flex; gap: 6px; flex-wrap: wrap; }
+.conv .name { white-space: normal; }
+@media (max-width: 760px) {
+  main { grid-template-columns: 1fr; grid-template-rows: 40% 1fr; }
+  .list { border-right: 0; border-bottom: 1px solid var(--line); }
+  .two { grid-template-columns: 1fr; }
+  .step { grid-template-columns: 22px 1fr; }
+  .step .dec, .step .det { grid-column: 2; } .step .ms { display: none; }
+  header { gap: 6px; padding: 0 10px; } .brand small, .live { display: none; }
+  nav button { padding: 0 7px; white-space: nowrap; }
+}
+@media (prefers-reduced-motion: no-preference) { .row, nav button { transition: background .12s; } }
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">eeao <small id="appname"></small></div>
+  <nav role="tablist">
+    <button role="tab" data-view="network" aria-selected="true">Network <span class="count" id="c-network">0</span></button>
+    <button role="tab" data-view="mcp" aria-selected="false">MCP <span class="count" id="c-mcp">0</span></button>
+    <button role="tab" data-view="chat" aria-selected="false">AI chat <span class="count" id="c-chat">0</span></button>
+  </nav>
+  <div class="spacer"></div>
+  <div class="live" id="live"><i></i><span>live</span></div>
+  <button class="ghost" id="clear" type="button">Clear</button>
+</header>
+<main>
+  <section class="list" id="list" aria-label="Calls"></section>
+  <section class="detail" id="detail" aria-live="polite"></section>
+</main>
+<script>
+const $ = (s) => document.querySelector(s);
+const state = { view: location.hash.slice(1) || 'network', rev: 0, ex: new Map(), reg: null, sel: {}, filter: 'all', q: '' };
+const LABEL = { authn: 'Authentication', authz: 'Authorization', input: 'Input', handler: 'Handler', output: 'Output', errors: 'Errors', analytics: 'Analytics', mcp: 'MCP tool', cli: 'CLI command', aiTool: 'AI tool' };
+const ICON = { pass: '✓', fail: '✕', off: '–', unreached: '·' };
+
+const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const time = (t) => new Date(t).toLocaleTimeString([], { hour12: false });
+const stable = (v) => JSON.stringify(v, (k, x) => (x && typeof x === 'object' && !Array.isArray(x) ? Object.fromEntries(Object.entries(x).sort()) : x));
+function json(v) {
+  if (v === undefined) return '<pre class="json"><span class="lit">(empty)</span></pre>';
+  const text = typeof v === 'string' ? v : JSON.stringify(v, null, 2);
+  const html = esc(text).replace(/(&quot;(?:[^&]|&(?!quot;))*?&quot;)(\s*:)?|\b(true|false|null)\b|(-?\d+(?:\.\d+)?)/g, (m, s, colon, lit, num) =>
+    s ? (colon ? `<span class="k">${s}</span>${colon}` : `<span class="str">${s}</span>`) : lit ? `<span class="lit">${lit}</span>` : `<span class="num">${num}</span>`);
+  return `<pre class="json">${html}</pre>`;
+}
+const tryParse = (t) => { try { return JSON.parse(t); } catch { return t; } };
+const statusCls = (s) => (s ? `s${String(s)[0]}` : 'serr');
+const dots = (steps) => `<span class="dots" title="${esc(steps.map((s) => `${LABEL[s.concern]}: ${s.status}`).join('\n'))}">${steps.map((s) => `<i class="${s.status}"></i>`).join('')}</span>`;
+const surfaceOf = (ex) => ex.kind === 'rpc' ? ex.surface : ex.kind === 'ai' ? 'ai' : ex.kind === 'outbound' ? 'out' : ex.kind;
+
+function journey(call) {
+  const r = call.result;
+  const outcome = r.ok ? `<span class="status s2">200 ok</span>` : `<span class="status ${statusCls(r.status)}">${r.status} ${esc(r.code)}</span>`;
+  return `<div class="journey">
+    <div class="jhead"><b class="mono">${esc(call.procedure)}</b><span class="pill ${call.surface}">${call.surface}</span>${outcome}<span class="spacer"></span><span class="mono" style="color:var(--faint)">${call.durationMs} ms</span></div>
+    ${call.steps.map((s) => `<div class="step ${s.status}"><span class="ic">${ICON[s.status]}</span><span class="lbl">${LABEL[s.concern]}</span>
+      <div><div class="dec">${esc(s.decision)}</div>${s.detail && s.status !== 'unreached' ? `<div class="det">${esc(s.detail)}</div>` : s.status === 'unreached' ? '<div class="det">not reached</div>' : ''}</div>
+      <span class="ms">${s.ms != null && s.status !== 'unreached' ? s.ms + ' ms' : ''}</span></div>`).join('')}
+  </div>`;
+}
+function gateChip(g) {
+  return { 'no-approval-needed': '<span class="chip auto">runs without approval</span>', 'needs-approval': '<span class="chip wait">waiting for approval</span>', approved: '<span class="chip ok">approved by a person</span>', 'unknown-tool': '<span class="chip bad">unknown tool</span>' }[g.gate] ?? '';
+}
+function headersBlock(h) { return `<dl class="kv">${Object.entries(h || {}).map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join('')}</dl>`; }
+
+// ---------- Network ----------
+function networkItems() {
+  return [...state.ex.values()].filter((e) => e.kind !== 'llm' || true).sort((a, b) => b.id - a.id);
+}
+function exTitle(e) {
+  const base = state.reg?.app.basePath ?? '/rpc';
+  if (e.kind === 'rpc') return { name: e.path.startsWith(base + '/') ? e.path.slice(base.length + 1) : e.path, sub: '' };
+  if (e.kind === 'mcp') {
+    const msgs = [].concat(e.reqBody ?? []);
+    const m = msgs.map((x) => x?.method === 'tools/call' ? `tools/call ${x.params?.name}` : x?.method).filter(Boolean).join(', ');
+    return { name: '/mcp', sub: m };
+  }
+  if (e.kind === 'ai') return { name: e.path.replace(base, ''), sub: e.reqBody?.tool ?? '' };
+  if (e.kind === 'llm') return { name: 'model', sub: `${e.path} ${e.reqBody?.model ?? ''}` };
+  return { name: e.path, sub: '' };
+}
+function renderNetwork() {
+  const f = state.filter, q = state.q.toLowerCase();
+  const items = networkItems().filter((e) => (f === 'all' || surfaceOf(e) === f || (f === 'out' && e.kind === 'llm')) && (!q || JSON.stringify(exTitle(e)).toLowerCase().includes(q)));
+  const filters = ['all', 'http', 'cli', 'mcp', 'ai', 'out'].map((k) => `<button type="button" data-filter="${k}" aria-pressed="${f === k}">${{ all: 'All', http: 'HTTP', cli: 'CLI', mcp: 'MCP', ai: 'AI tools', out: 'Outbound' }[k]}</button>`).join('');
+  const rows = items.map((e) => {
+    const t = exTitle(e);
+    const steps = e.calls.flatMap((c) => c.steps);
+    return `<div class="row" tabindex="0" data-id="${e.id}" aria-selected="${state.sel.network === e.id}">
+      <span class="t">${time(e.at)}</span><span class="pill ${surfaceOf(e)}">${surfaceOf(e)}</span>
+      <span class="name">${esc(t.name)} <span class="sub">${esc(t.sub)}</span></span>
+      <span class="right">${e.gates.some((g) => g.gate === 'needs-approval') ? '<span class="chip wait">held for approval</span>' : ''}${e.calls[0] ? dots(e.calls[0].steps) : ''}<span class="status ${statusCls(e.status)}">${e.status ?? (e.error ? 'ERR' : '…')}</span><span class="ms">${e.ms ?? ''}${e.ms != null ? 'ms' : ''}</span></span></div>`;
+  }).join('');
+  $('#list').innerHTML = `<div class="filters">${filters}<input id="q" type="search" placeholder="Filter by procedure or path" value="${esc(state.q)}" aria-label="Filter"></div>${rows || '<div class="empty">No calls yet. Call a procedure over HTTP, the CLI, MCP or an AI tool and it shows here.</div>'}`;
+  const e = state.ex.get(state.sel.network);
+  if (!e) { $('#detail').innerHTML = `<div class="empty">Pick a call to see its journey through every decision: how it came in, who called, whether the input and policy passed, what the handler did, and which analytics event went out.</div>`; return; }
+  const t = exTitle(e);
+  $('#detail').innerHTML = `
+    <h1><span class="pill ${surfaceOf(e)}">${surfaceOf(e)}</span><span class="mono">${esc(e.method)} ${esc(e.kind === 'llm' || e.kind === 'outbound' ? e.url : e.path)}</span><span class="status ${statusCls(e.status)}">${e.status ?? e.error ?? ''}</span></h1>
+    <div class="meta"><span>${time(e.at)}</span><span>${e.ms ?? '…'} ms</span>${t.sub ? `<span>${esc(t.sub)}</span>` : ''}</div>
+    ${e.gates.length ? `<h2>AI tool approval</h2>${e.gates.map((g) => `<div class="gates"><b class="mono">${esc(g.tool)}</b>${gateChip(g)}</div>`).join('')}` : ''}
+    ${e.calls.length ? `<h2>Journey</h2>${e.calls.map(journey).join('<div style="height:10px"></div>')}` : e.kind === 'rpc' || e.kind === 'mcp' ? '<h2>Journey</h2><div class="meta">No procedure ran for this request (a document, a protocol message, or a request rejected before the pipeline).</div>' : ''}
+    <div class="two"><div><h2>Request</h2>${headersBlock(e.reqHeaders)}<div style="height:8px"></div>${json(e.reqBody)}</div>
+    <div><h2>Response</h2>${headersBlock(e.resHeaders)}<div style="height:8px"></div>${json(e.resBody)}</div></div>`;
+}
+
+// ---------- MCP ----------
+function mcpItems() {
+  const out = [];
+  for (const e of state.ex.values()) {
+    if (e.kind !== 'mcp' || e.method !== 'POST') continue;
+    const reqs = [].concat(e.reqBody ?? []).filter((m) => m && m.method);
+    const resList = e.resBody?.sse ? e.resBody.sse : [].concat(e.resBody ?? []);
+    reqs.forEach((m, i) => out.push({ key: `${e.id}:${i}`, ex: e, msg: m, res: m.id == null ? null : resList.find((r) => r && r.id === m.id) }));
+  }
+  return out.sort((a, b) => b.ex.id - a.ex.id);
+}
+const procByTool = (name) => state.reg?.procedures.find((p) => p.toolName === name);
+function effectBadges(ann, proc) {
+  const effect = proc?.mcp?.effect ?? (ann?.destructiveHint ? 'destructive' : ann?.readOnlyHint ? 'read' : 'write');
+  const b = [`<span class="badge ${effect}">${effect}</span>`];
+  if (ann?.idempotentHint) b.push('<span class="badge plain">idempotent</span>');
+  return b.join('');
+}
+function mcpStatus(it) {
+  if (!it.res) return it.msg.id == null ? '<span class="status s2">sent</span>' : '<span class="status">…</span>';
+  if (it.res.error) return `<span class="status s5">error</span>`;
+  if (it.res.result?.isError) { const c = tryParse(it.res.result.content?.[0]?.text)?.error?.code; return `<span class="status s4">${esc(c || 'isError')}</span>`; }
+  return '<span class="status s2">ok</span>';
+}
+function renderMcp() {
+  const items = mcpItems();
+  $('#list').innerHTML = items.map((it) => `<div class="row" tabindex="0" data-id="${it.key}" aria-selected="${state.sel.mcp === it.key}">
+    <span class="t">${time(it.ex.at)}</span><span class="pill mcp">${it.msg.id == null ? 'notify' : 'call'}</span>
+    <span class="name mono">${esc(it.msg.method)} <span class="sub">${esc(it.msg.params?.name ?? '')}</span></span>
+    <span class="right">${it.msg.method === 'tools/call' && it.ex.calls[0] ? dots(it.ex.calls[0].steps) : ''}${mcpStatus(it)}</span></div>`).join('')
+    || '<div class="empty">No MCP traffic yet. Point an MCP client at <code>/mcp</code> and its messages show here, one row per JSON-RPC call.</div>';
+  const it = items.find((x) => x.key === state.sel.mcp);
+  if (!it) { $('#detail').innerHTML = '<div class="empty">Pick a message. Tool calls show the arguments, what the client got back, and the call\'s journey through auth, validation, policy and analytics.</div>'; return; }
+  const { msg, res, ex } = it;
+  let body = '';
+  if (msg.method === 'initialize') {
+    body = `<h2>Client</h2><dl class="kv"><dt>name</dt><dd>${esc(msg.params?.clientInfo?.name)} ${esc(msg.params?.clientInfo?.version)}</dd><dt>protocol</dt><dd>${esc(msg.params?.protocolVersion)}</dd><dt>auth</dt><dd>${esc(ex.reqHeaders.authorization ?? 'none')}</dd></dl>
+      <h2>Server</h2>${json(res?.result)}`;
+  } else if (msg.method === 'tools/list') {
+    const tools = res?.result?.tools ?? [];
+    body = `<h2>${tools.length} tools offered</h2><div style="overflow-x:auto"><table class="tools"><tr><th>Tool</th><th>Effect</th><th>Description</th><th>Input</th></tr>${tools.map((t) => `<tr><td class="mono">${esc(t.name)}</td><td>${effectBadges(t.annotations, procByTool(t.name))}</td><td>${esc(t.description)}</td><td class="mono">${esc(Object.keys(t.inputSchema?.properties ?? {}).join(', ') || '-')}</td></tr>`).join('')}</table></div>
+      <div class="meta" style="margin-top:8px">Only procedures that chose <span class="mono">.mcp()</span> are listed. The effect comes from that decision.</div>`;
+  } else if (msg.method === 'tools/call') {
+    const proc = procByTool(msg.params?.name);
+    const content = res?.result?.content?.map((c) => (c.type === 'text' ? tryParse(c.text) : c));
+    body = `<div class="meta" style="margin-top:6px">${effectBadges(null, proc)}${proc ? `<span>procedure <span class="mono">${esc(proc.name)}</span></span>` : ''}<span>${esc(ex.reqHeaders.authorization ?? 'no auth header')}</span></div>
+      <div class="two"><div><h2>Arguments</h2>${json(msg.params?.arguments)}</div><div><h2>${res?.result?.isError ? 'Error returned' : 'Result'}</h2>${json(content?.length === 1 ? content[0] : content)}</div></div>
+      <h2>Journey</h2>${ex.calls.length ? ex.calls.map(journey).join('') : '<div class="meta">The call did not reach the pipeline.</div>'}`;
+  } else {
+    body = `<h2>Params</h2>${json(msg.params)}<h2>Response</h2>${json(res)}`;
+  }
+  $('#detail').innerHTML = `<h1><span class="pill mcp">mcp</span><span class="mono">${esc(msg.method)}${msg.params?.name ? ' ' + esc(msg.params.name) : ''}</span>${mcpStatus(it)}</h1>
+    <div class="meta"><span>${time(ex.at)}</span><span>${ex.ms ?? '…'} ms</span>${msg.id != null ? `<span>id ${esc(msg.id)}</span>` : ''}</div>${body}`;
+}
+
+// ---------- AI chat ----------
+function conversations() {
+  const all = [...state.ex.values()].sort((a, b) => a.id - b.id);
+  // In-app chats run tools inside another request (e.g. a procedure), never through /rpc/ai/run.
+  const inApp = all.filter((e) => e.kind !== 'ai');
+  const gates = inApp.flatMap((e) => e.gates.map((g) => ({ ...g, ex: e })));
+  const aiCalls = inApp.flatMap((e) => e.calls.filter((c) => c.surface === 'ai').map((c) => ({ ...c, ex: e })));
+  const convs = new Map();
+  for (const e of all) {
+    if (e.kind !== 'llm' || !Array.isArray(e.reqBody?.messages)) continue;
+    const key = 'llm:' + stable([e.reqBody.system ?? '', e.reqBody.messages[0]]);
+    if (!convs.has(key)) convs.set(key, { key, type: 'llm', calls: [] });
+    convs.get(key).calls.push(e);
+  }
+  for (const e of all) {
+    if (e.kind !== 'ai' || !e.path.endsWith('/ai/run')) continue;
+    const key = 'ext:' + (e.reqHeaders.authorization ?? 'anonymous');
+    if (!convs.has(key)) convs.set(key, { key, type: 'external', runs: [] });
+    convs.get(key).runs.push(e);
+  }
+  const list = [...convs.values()].map((c) => {
+    const last = c.type === 'llm' ? c.calls[c.calls.length - 1] : c.runs[c.runs.length - 1];
+    let title, pending = false;
+    if (c.type === 'llm') {
+      const first = c.calls[0].reqBody.messages[0];
+      title = typeof first.content === 'string' ? first.content : first.content?.find?.((b) => b.type === 'text')?.text ?? 'Conversation';
+    } else title = `Agent outside the app (${c.key.slice(4)})`;
+    return { ...c, last, title, at: last.at };
+  });
+  return { list: list.sort((a, b) => b.last.id - a.last.id), gates, aiCalls };
+}
+function textOf(content) { return typeof content === 'string' ? content : (content ?? []).filter((b) => b.type === 'text').map((b) => b.text).join('\n'); }
+function toolCard({ name, input, gates, call, result, isError, waiting }) {
+  const proc = procByTool(name);
+  const chips = gates.length ? gates.map(gateChip).join('<span>→</span>') : '';
+  const resultHtml = result !== undefined ? `<div><div class="meta" style="margin-bottom:4px">${isError ? 'Tool error returned to the model' : 'Result returned to the model'}</div>${json(tryParse(result))}</div>`
+    : waiting ? '<div class="meta">The model is waiting. Nothing ran yet; a person has to approve this call.</div>' : '';
+  return `<div class="tool ${waiting ? 'waiting' : isError ? 'err' : ''}">
+    <div class="th"><b>${esc(name)}</b>${proc?.aiTool?.needsApproval ? '<span class="badge write">needs approval</span>' : '<span class="badge plain">no approval</span>'}<span class="spacer"></span>${call ? dots(call.steps) : ''}${call ? `<span class="status ${call.result.ok ? 's2' : statusCls(call.result.status)}">${call.result.ok ? 200 : call.result.status + ' ' + esc(call.result.code)}</span>` : ''}</div>
+    <div class="tb">${chips ? `<div class="gates">${chips}</div>` : ''}
+      <div><div class="meta" style="margin-bottom:4px">Input from the model</div>${json(input)}</div>
+      ${resultHtml}
+      ${call ? `<details><summary>Journey through the pipeline (${call.durationMs} ms)</summary><div style="height:6px"></div>${journey(call)}</details>` : ''}
+    </div></div>`;
+}
+function renderChat() {
+  const { list, gates, aiCalls } = conversations();
+  $('#c-chat').textContent = list.length;
+  $('#list').innerHTML = list.map((c) => `<div class="row conv" tabindex="0" data-id="${esc(c.key)}" aria-selected="${state.sel.chat === c.key}" style="grid-template-columns:58px 44px 1fr auto">
+      <span class="t">${time(c.at)}</span><span class="pill ${c.type === 'llm' ? 'llm' : 'ai'}">${c.type === 'llm' ? 'chat' : 'agent'}</span>
+      <span class="name">${esc(c.title.slice(0, 120))}</span><span class="right"><span class="ms">${c.type === 'llm' ? c.calls.length + '×' : c.runs.length + '×'}</span></span></div>`).join('')
+    || '<div class="empty">No AI activity yet. Conversations show here when the app calls a model API (Anthropic Messages, from inside the Worker) or an agent calls <code>/rpc/ai/run</code>.</div>';
+  const c = list.find((x) => x.key === state.sel.chat);
+  if (!c) { $('#detail').innerHTML = '<div class="empty">Pick a conversation to read it with every tool call inline: what the model asked for, whether a person had to approve it, how the call went through auth and policy, and what came back.</div>'; return; }
+  const used = new Set();
+  const claim = (arr, pred) => arr.filter((x) => !used.has(x) && pred(x)).map((x) => (used.add(x), x));
+  if (c.type === 'external') {
+    const cards = c.runs.map((e) => {
+      const tr = e.resBody?.tool_result;
+      return toolCard({ name: e.reqBody?.tool, input: e.reqBody?.input, gates: e.gates, call: e.calls[0], result: tr?.content, isError: tr?.is_error, waiting: e.resBody?.status === 'needs_approval' });
+    });
+    $('#detail').innerHTML = `<h1>${esc(c.title)}</h1><div class="meta"><span>${c.runs.length} tool call${c.runs.length === 1 ? '' : 's'} over <span class="mono">POST /rpc/ai/run</span></span><span>The model runs elsewhere, so only the tool calls are visible here.</span></div><h2>Tool calls</h2><div class="chat">${cards.join('')}</div>`;
+    return;
+  }
+  const last = c.last, req = last.reqBody;
+  const messages = [...req.messages];
+  if (last.resBody?.content) messages.push({ role: 'assistant', content: last.resBody.content });
+  const results = new Map();
+  for (const m of messages) if (Array.isArray(m.content)) for (const b of m.content) if (b.type === 'tool_result') results.set(b.tool_use_id, { content: typeof b.content === 'string' ? b.content : textOf(b.content), isError: !!b.is_error });
+  let turn = 0;
+  const parts = [];
+  for (const m of messages) {
+    if (m.role === 'assistant') {
+      const call = c.calls[turn++];
+      if (call) parts.push(`<div class="turn">model call ${turn} · ${call.ms ?? '…'} ms${call.resBody?.usage ? ` · ${call.resBody.usage.input_tokens} in / ${call.resBody.usage.output_tokens} out` : ''}${call.resBody?.stop_reason ? ` · ${esc(call.resBody.stop_reason)}` : ''}</div>`);
+    }
+    const blocks = typeof m.content === 'string' ? [{ type: 'text', text: m.content }] : m.content ?? [];
+    for (const b of blocks) {
+      if (b.type === 'text' && b.text?.trim()) parts.push(`<div class="who ${m.role}">${m.role === 'user' ? 'Person' : 'Model'}</div><div class="msg ${m.role}">${esc(b.text)}</div>`);
+      if (b.type === 'tool_use') {
+        const g = claim(gates, (x) => x.tool === b.name && stable(x.input) === stable(b.input));
+        const procName = procByTool(b.name)?.name;
+        const calls = claim(aiCalls, (x) => x.procedure === procName && stable(x.input) === stable(b.input));
+        const r = results.get(b.id);
+        parts.push(toolCard({ name: b.name, input: b.input, gates: g, call: calls[calls.length - 1], result: r?.content, isError: r?.isError, waiting: !r && g.length && g[g.length - 1].gate === 'needs-approval' }));
+      }
+    }
+  }
+  const offered = (req.tools ?? []).map((t) => `<span class="badge ${procByTool(t.name)?.aiTool?.needsApproval ? 'write' : 'plain'}">${esc(t.name)}</span>`).join('');
+  const usage = c.calls.reduce((a, e) => [a[0] + (e.resBody?.usage?.input_tokens ?? 0), a[1] + (e.resBody?.usage?.output_tokens ?? 0)], [0, 0]);
+  const sys = typeof req.system === 'string' ? req.system : textOf(req.system);
+  $('#detail').innerHTML = `<h1>${esc(c.title.slice(0, 90))}</h1>
+    <div class="meta"><span class="mono">${esc(last.resBody?.model ?? req.model)}</span><span>${c.calls.length} model calls</span><span>${usage[0]} in / ${usage[1]} out tokens</span><span>${esc(last.path)}</span></div>
+    ${offered ? `<h2>Tools offered</h2><div class="offered">${offered}</div>` : ''}
+    ${sys ? `<h2>System prompt</h2><div class="sys">${esc(sys)}</div>` : ''}
+    <h2>Conversation</h2><div class="chat">${parts.join('')}</div>`;
+}
+
+// ---------- shell ----------
+function counts() {
+  $('#c-network').textContent = state.ex.size;
+  $('#c-mcp').textContent = mcpItems().length;
+  conversationsCount();
+}
+function conversationsCount() { $('#c-chat').textContent = conversations().list.length; }
+function render() {
+  document.querySelectorAll('nav button').forEach((b) => b.setAttribute('aria-selected', String(b.dataset.view === state.view)));
+  const ls = $('#list').scrollTop, ds = $('#detail').scrollTop, focusQ = document.activeElement?.id === 'q';
+  const opened = [...document.querySelectorAll('#detail details')].map((d) => d.open);
+  ({ network: renderNetwork, mcp: renderMcp, chat: renderChat })[state.view]();
+  document.querySelectorAll('#detail details').forEach((d, i) => { if (opened[i]) d.open = true; });
+  $('#list').scrollTop = ls; $('#detail').scrollTop = ds;
+  if (focusQ) { const q = $('#q'); q.focus(); q.setSelectionRange(q.value.length, q.value.length); }
+  counts();
+}
+document.addEventListener('click', (ev) => {
+  const tab = ev.target.closest('nav button');
+  if (tab) { state.view = tab.dataset.view; history.replaceState(null, '', '#' + state.view); $('#detail').scrollTop = 0; return render(); }
+  const f = ev.target.closest('[data-filter]');
+  if (f) { state.filter = f.dataset.filter; return render(); }
+  const row = ev.target.closest('.row');
+  if (row) { const id = row.dataset.id; state.sel[state.view] = state.view === 'network' ? Number(id) : id; $('#detail').scrollTop = 0; render(); }
+});
+document.addEventListener('keydown', (ev) => {
+  if (ev.key === 'Enter' && ev.target.classList?.contains('row')) ev.target.click();
+  if ((ev.key === 'ArrowDown' || ev.key === 'ArrowUp') && ev.target.classList?.contains('row')) {
+    const sib = ev.key === 'ArrowDown' ? ev.target.nextElementSibling : ev.target.previousElementSibling;
+    if (sib?.classList.contains('row')) { ev.preventDefault(); sib.click(); document.querySelector(`.row[data-id="${CSS.escape(sib.dataset.id)}"]`)?.focus(); }
+  }
+});
+document.addEventListener('input', (ev) => { if (ev.target.id === 'q') { state.q = ev.target.value; render(); } });
+$('#clear').addEventListener('click', async () => { await fetch('/__eeao/clear', { method: 'POST' }); state.ex.clear(); state.sel = {}; state.rev = 0; render(); });
+
+async function poll() {
+  try {
+    const r = await (await fetch('/__eeao/events?since=' + state.rev)).json();
+    $('#live').classList.remove('down');
+    const keep = new Set(r.ids);
+    for (const id of state.ex.keys()) if (!keep.has(id)) state.ex.delete(id);
+    for (const e of r.exchanges) state.ex.set(e.id, e);
+    const changed = r.rev !== state.rev;
+    state.rev = r.rev;
+    if (changed) {
+      if (state.sel.network == null && state.ex.size) state.sel.network = Math.max(...state.ex.keys());
+      render();
+    }
+  } catch { $('#live').classList.add('down'); }
+  setTimeout(poll, 800);
+}
+(async () => {
+  try { state.reg = await (await fetch('/__eeao/registry')).json(); $('#appname').textContent = `${state.reg.app.name} · dev`; } catch {}
+  render();
+  poll();
+})();
+</script>
+</body>
+</html>

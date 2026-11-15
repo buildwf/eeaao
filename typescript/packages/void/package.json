@@ -1,0 +1,13 @@
+{
+  "name": "@eeao/void",
+  "version": "0.1.0",
+  "description": "Zero-setup eeao for Void: a Vite plugin plus one middleware file",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./plugin": "./src/plugin.ts",
+    "./middleware": "./src/middleware.ts"
+  },
+  "peerDependencies": { "void": "^1.8.0", "vite": "^8.0.0" },
+  "license": "MIT"
+}

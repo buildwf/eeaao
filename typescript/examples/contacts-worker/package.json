@@ -1,0 +1,19 @@
+{
+  "name": "eeao-contacts-example",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "typecheck": "tsc --noEmit",
+    "deploy": "tsc --noEmit && wrangler deploy"
+  },
+  "dependencies": {
+    "@eeao/analytics": "0.1.0",
+    "@eeao/core": "0.1.0",
+    "@eeao/http": "0.1.0",
+    "@eeao/mcp": "0.1.0",
+    "agents": "0.33.0",
+    "@modelcontextprotocol/server": "2.4.0",
+    "zod": "4.6.7"
+  }
+}

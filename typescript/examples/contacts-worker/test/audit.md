@@ -1,0 +1,6 @@
+| procedure | profiles | authn | authz | input | output | errors | analytics | mcp | cli | aiTool |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| contacts.delete | admin-only | auth(session-or-token) [admin-only] | policy(admin) [admin-only] | schema(zod) | schema(zod) | NOT_FOUND | event(contact.deleted) | tool(destructive) | none: Admin actions ship through the dashboard only [admin-only] | tool(needs approval) |
+| contacts.get | org-member | auth(session-or-token) [org-member] | policy(same-org) | schema(zod) | schema(zod) | NOT_FOUND | event(contact.viewed) | tool(read) | command(contacts get) | none: Returns PII; agents use contacts.search, which redacts email |
+| contacts.search | org-member | auth(session-or-token) [org-member] | policy(same-org) | schema(zod) | schema(zod) | none: An empty result is a valid answer, not an error | event(contacts.searched) | tool(read) | command(contacts search) | tool(no approval) |
+| status | - | none: Uptime checks run without credentials | none: Anyone may see whether the service is up | none | schema(zod) | none: Status always answers; failures surface as 500s | none: Health checks every few seconds would drown real events | none: Agents have no use for an uptime probe | command(status) | none: Agents have no use for an uptime probe |

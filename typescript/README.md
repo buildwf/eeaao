@@ -1,0 +1,174 @@
+# eeao (TypeScript)
+
+A procedure builder for Cloudflare Workers where every procedure must decide nine
+concerns before it compiles: authentication, authorization, input, output, errors,
+analytics, MCP, CLI and AI tool exposure. Skipping one is not possible by omission.
+Opting out is a decision too, and it needs a reason.
+
+The goal is to force whoever writes the code, especially an AI agent, to make each
+choice, and to make every choice visible in review. Package names (`@eeao/*`) are
+placeholders.
+
+```ts
+export const getContact = procedure('contacts.get')
+  .use(orgMember)                                         // profile: decides auth
+  .input(z.object({ orgId: z.string(), id: z.string() }))
+  .authz({ policy: 'same-org', check: (user, input) => user.orgId === input.orgId })
+  .output(Contact)
+  .errors({ NOT_FOUND: { status: 404, message: 'No such contact' } })
+  .analytics({ event: 'contact.viewed', props: (input) => ({ orgId: input.orgId }) })
+  .mcp({ description: 'Look up one contact by id', effect: 'read' })
+  .cli({ command: 'contacts get', description: 'Print one contact as JSON' })
+  .noAiTool({ reason: 'Returns PII; agents use contacts.search, which redacts email' })
+  .handler(({ input, fail }) => contacts.get(input.id) ?? fail('NOT_FOUND'));
+```
+
+If something is missing, `.handler()` will not type-check, and the message says what to do:
+
+```
+Argument of type '() => Promise<{ ids: never[]; }>' is not assignable to parameter of type
+'"Undecided: authz, errors, analytics, cli, aiTool. Decide each one (or opt out with a reason) before .handler()"'.
+```
+
+## Packages
+
+| Package | Runs on | What it does | Dependencies |
+| --- | --- | --- | --- |
+| `@eeao/core` | anywhere | Builder, profiles, registry, pipeline, audit, manifest | `@standard-schema/spec` (types) |
+| `@eeao/http` | Worker | `POST /rpc/{name}` fetch handler, `manifest.json`, `openapi.json`; `@eeao/http/client` is a typed fetch client | none |
+| `@eeao/mcp` | Worker | Stateless MCP over Streamable HTTP via Cloudflare's `createMcpHandler` (agents/mcp/server + MCP SDK v2) | peers: `agents`, `@modelcontextprotocol/server` |
+| `@eeao/ai` | Worker | Tool definitions for the Anthropic API and the AI SDK, with approval holds | none |
+| `@eeao/analytics` | Worker | Workers Analytics Engine (default), PostHog, fan-out, in-memory | none |
+| `@eeao/cli` | Node 20+ / Bun | `eeao` command driven by the Worker's manifest, bearer token auth | none |
+
+The Worker side uses Web APIs only, with no `nodejs_compat`.
+
+## The nine decisions
+
+| Concern | Decide with | Opt out with | At runtime |
+| --- | --- | --- | --- |
+| authn | `auth(provider)` | `noAuth({ reason })` | 401 when the provider returns null; `ctx` is the caller |
+| authz | `authz({ policy, check })` | `noAuthz({ reason })` | 403 when `check(ctx, input)` is false; runs after input parsing |
+| input | `input(schema)` | `noInput()` | 400 with issues; `noInput()` rejects a non-empty body |
+| output | `output(schema)` | none | Validated before it leaves; a mismatch is a logged 500 |
+| errors | `errors({ CODE: { status, message } })` | `noErrors({ reason })` | `fail()` only accepts declared codes; any other throw is a 500 with no details |
+| analytics | `analytics({ event, props })` | `noAnalytics({ reason })` | One event per call that reached the handler, sent through `waitUntil` |
+| mcp | `mcp({ description, effect })` | `noMcp({ reason })` | Listed in `tools/list`; `effect` (read, write, destructive) sets the annotations |
+| cli | `cli({ command, description })` | `noCli({ reason })` | A subcommand with flags generated from the input schema |
+| aiTool | `aiTool({ description, needsApproval })` | `noAiTool({ reason })` | A tool definition; `needsApproval: true` holds the call until approved |
+
+Order is free, with one exception: `authz` needs authentication decided first, because
+its `check` is typed by the caller. A profile (`profile('admin-only').auth(...).authz(...)`)
+fills several slots at once, and applying it with `.use()` is still an explicit choice
+that shows up in the audit.
+
+`mcp({ effect })` and `aiTool({ needsApproval })` are required fields on purpose: whether
+a tool is destructive, and whether a person must approve it, should never be a default.
+
+## Three gates
+
+1. **Types.** The handler gate, hidden methods for decided concerns, typed `fail()` codes,
+   and reason checks on literal strings (three words, not "n/a" or "todo").
+2. **Load.** `defineRegistry([...])` checks every procedure again and throws one error
+   listing every problem: missing decisions (from `as any` or plain JS), weak reasons,
+   duplicate names or commands, reserved error codes, analytics with no provider, and
+   schemas that cannot become JSON Schema. Build the registry at module scope: a throw
+   there fails `wrangler deploy` with error 10021, because wrangler bundles with esbuild
+   and never runs the type checker. The example's deploy script is
+   `tsc --noEmit && wrangler deploy` so the type gate runs first.
+3. **Review.** `registry.auditTable()` prints every decision for every procedure. The
+   example snapshots it to `test/audit.md`, so a change that turns `contacts.get` into
+   `noAuth` is a visible line in the pull request.
+
+## Schemas
+
+Any [Standard Schema](https://standardschema.dev) works for validation. Procedures
+exposed to MCP, the CLI or AI tools also need JSON Schema, read through Standard JSON
+Schema (`~standard.jsonSchema`): Zod 4.2+ and ArkType provide it, and Valibot schemas
+are wrapped with `toStandardJsonSchema()` from `@valibot/to-json-schema`. Conversion
+happens when the registry loads, so an unsupported schema (for example `z.date()`)
+fails the deploy instead of the first `tools/list`.
+
+## Worker setup
+
+```ts
+// registry.ts
+export const registry = defineRegistry([getContact, searchContacts, deleteContact, status], {
+  analytics: analyticsEngine({ binding: 'ANALYTICS' }),
+});
+
+// index.ts
+const rpc = rpcHandler(registry, { openapi: { title: 'Contacts API', version: '0.1.0' } });
+const mcp = mcpHandler(registry, { name: 'contacts', version: '0.1.0' });
+
+export default {
+  fetch(request, env, ctx) {
+    if (mcp.matches(request)) return mcp(request, env, ctx);
+    if (rpc.matches(request)) return rpc(request, env, ctx);
+    return new Response('Not found', { status: 404 });
+  },
+} satisfies ExportedHandler<Env>;
+```
+
+Wire format: success is `200 { "data": ... }`, failure is
+`{ "error": { "code", "message", "issues"? } }` with the status from the table above or
+from the declared error.
+
+AI tools run inside the Worker with the user's own request, so an agent gets exactly
+that user's permissions:
+
+```ts
+const tools = anthropicTools(registry);                    // pass to messages.create
+const run = await runTool(registry, block.name, block.input, { request, env, waitUntil });
+const { content, is_error } = toolResultContent(run);      // tool_result block
+```
+
+## CLI
+
+```
+$ EEAO_URL=https://api.example.com EEAO_TOKEN=... eeao
+Commands:
+  contacts get     Print one contact as JSON
+  contacts search  Search contacts by name
+  status           Check that the API is up
+
+$ eeao contacts search --org-id o1 --query tur
+{ "results": [{ "id": "c2", "name": "Alan Turing" }] }
+```
+
+The CLI downloads `/rpc/manifest.json` (procedures that chose `.cli()`, with JSON Schema)
+and calls the Worker over HTTP with `Authorization: Bearer`. It never imports handler
+code. Flags come from top-level input properties in kebab-case, with numbers, booleans
+(`--flag`, `--no-flag`), enums and repeated array flags; `--json '{...}'` passes the whole
+input. Exit codes: 0 success, 1 call failed, 2 usage error.
+
+## Analytics Engine layout
+
+`index1` = procedure; `blob1..7` = event, procedure, surface (http, mcp, cli, ai),
+outcome, error code, actor id, props as JSON; `double1` = HTTP status, `double2` =
+handler duration in ms.
+
+## Development
+
+```
+npm install
+npm run check        # build, type tests, compiler message snapshot, 45 vitest tests
+npm run e2e          # example Worker in wrangler dev: HTTP, CLI, MCP client, deploy gate
+cd examples/contacts-worker && npm run dev
+```
+
+- `packages/core/type-tests/pass.ts`: positive types plus `@ts-expect-error` for each
+  mistake the types must reject.
+- `packages/core/type-tests/messages/messages.expected.txt`: the exact compiler messages
+  an agent sees, snapshotted (`npm run test:types -- --update` to accept a change).
+- `packages/core/type-tests/perf.ts`: 200 full procedures type-check in about 0.5 s.
+
+Built and tested with TypeScript 7.0, Zod 4.6, Valibot 1.5, agents 0.33, MCP SDK 2.4,
+wrangler 4.160 and vitest 5.1. The example Worker bundles to 1.26 MB (222 KB gzipped),
+mostly the MCP SDK and Zod.
+
+## Not done yet
+
+- Session-cookie auth provider (the example uses API tokens; `anyOf()` combines providers).
+- OAuth for MCP clients; MCP calls currently authenticate with the same bearer token.
+- Publishing to npm (needs a real name).

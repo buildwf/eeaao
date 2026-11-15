@@ -1,0 +1,13 @@
+{
+  "version": "7",
+  "dialect": "sqlite",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "6",
+      "when": 1794551916342,
+      "tag": "20261113063836_cheerful_nextwave",
+      "breakpoints": true
+    }
+  ]
+}
