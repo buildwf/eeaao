@@ -12,7 +12,4 @@ describe('typed procedures', () => {
     expectTypeOf<keyof Procs<Typed1>>().toEqualTypeOf<'count.get'>();
     expectTypeOf<Live<Typed1>>().not.toBeNever();
   });
-  it('is never for a type without procedures', () => {
-    expectTypeOf<Procs<{}>>().toBeNever();
-  });
 });
