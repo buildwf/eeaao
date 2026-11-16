@@ -1,6 +1,12 @@
 import type { InputOf, OutputOf, Registry } from '@eeao/core';
 
 /**
+ * What the live client needs of a registry: its procedure map, which is a type and nothing at runtime. A `Registry` has
+ * one, and so does a plain `{ '~procedures': ProcedureMap }` (Void generates the map from the procedures folder).
+ */
+export type Typed = { readonly '~procedures'?: unknown };
+
+/**
  * How a client hears about changes. Void's `connectLiveStream` is one (see `@eeao/void/live`);
  * anything with topics and a reconnect signal works. Delivery may be at most once, so the
  * store never trusts an event's payload: an event only means "this query may be stale".
@@ -18,7 +24,7 @@ export type QueryState<T> =
   /** `data` is the last good value, if there was one. */
   | { status: 'error'; data: T | undefined; error: Error; fetching: boolean };
 
-export type Procs<R> = R extends Registry<any> ? NonNullable<R['~procedures']> : never;
+export type Procs<R> = R extends { readonly '~procedures'?: infer P } ? NonNullable<P> : never;
 export type TopicMap<R> = { [N in keyof Procs<R> & string]?: (input: InputOf<Procs<R>[N]>) => string[] };
 
 export type LiveOptions<R> = {
@@ -75,7 +81,7 @@ export function stableKey(value: unknown): string {
  * The framework-free core. One entry per (procedure, input): components that ask for the same
  * query share one fetch and one set of subscriptions. An entry is live while someone listens.
  */
-export function createLive<R extends Registry<any> = Registry<any>>(options: LiveOptions<R>) {
+export function createLive<R extends Typed = Registry<any>>(options: LiveOptions<R>) {
   const entries = new Map<string, Entry>();
   const debounceMs = options.debounceMs ?? 50;
   const cacheMs = options.cacheMs ?? 30_000;
@@ -193,4 +199,4 @@ export function createLive<R extends Registry<any> = Registry<any>>(options: Liv
   return { query, mutate, refetchAll };
 }
 
-export type Live<R extends Registry<any> = Registry<any>> = ReturnType<typeof createLive<R>>;
+export type Live<R extends Typed = Registry<any>> = ReturnType<typeof createLive<R>>;

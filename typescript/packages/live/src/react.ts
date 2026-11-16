@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState, useSyncExternalStore } from 'react';
-import type { InputOf, OutputOf, Registry } from '@eeao/core';
-import type { Live, Procs, QueryOptions, QueryState } from './index.js';
+import type { InputOf, OutputOf } from '@eeao/core';
+import type { Live, Procs, QueryOptions, QueryState, Typed } from './index.js';
 
 export type UseQueryResult<T> = QueryState<T> & {
   /** `status === 'loading'`, for the first load only. Later refetches keep the old data. */
@@ -15,7 +15,7 @@ export type UseQueryResult<T> = QueryState<T> & {
  *   const messages = useQuery('messages.list', { channel });   // refetches when its topics fire
  *   const send = useMutation('messages.send');
  */
-export function createLiveHooks<R extends Registry<any>>(live: Live<R>) {
+export function createLiveHooks<R extends Typed>(live: Live<R>) {
   function useQuery<N extends keyof Procs<R> & string>(
     name: N,
     input: InputOf<Procs<R>[N]>,
