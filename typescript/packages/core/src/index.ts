@@ -23,6 +23,7 @@ export {
   type State,
   type Surface,
   type Undecided,
+  withProcedureName,
 } from './builder.js';
 export {
   defineRegistry,

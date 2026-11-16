@@ -125,3 +125,11 @@ describe('audit', () => {
     expect(registry.manifest().procedures.map((p) => p.cli?.command)).toEqual(['contacts get', 'ping']);
   });
 });
+
+describe('withProcedureName', () => {
+  it('names an unnamed procedure and keeps an explicit name', async () => {
+    const { procedure, withProcedureName } = await import('../src/index.js');
+    expect(withProcedureName(procedure(), 'drafts.save')).toMatchObject({ name: 'drafts.save' });
+    expect(withProcedureName(procedure('own'), 'drafts.save')).toMatchObject({ name: 'own' });
+  });
+});
