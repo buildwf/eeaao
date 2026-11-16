@@ -1,0 +1,10 @@
+{
+  "name": "@eeao/data",
+  "version": "0.1.0",
+  "description": "One Durable Object per deployment: transactional SQLite documents, indexes, FTS5, vectors and cancellable scheduled jobs",
+  "type": "module",
+  "sideEffects": false,
+  "exports": { ".": { "types": "./dist/index.d.ts", "default": "./dist/index.js" } },
+  "files": ["dist", "src"],
+  "license": "MIT"
+}

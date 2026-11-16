@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 
 // eeao is the core and knows nothing about Void. Only `@eeao/void`, the adapter, may
 // import from the framework.
-const packages = ['core', 'http', 'mcp', 'ai', 'analytics', 'cli'];
+const packages = ['core', 'http', 'mcp', 'ai', 'analytics', 'cli', 'data', 'live'];
 const voidImport = /(?:from|import)\s*\(?\s*['"]void(?:\/[^'"]*)?['"]/;
 
 describe('framework isolation', () => {

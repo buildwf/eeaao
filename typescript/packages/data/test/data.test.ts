@@ -1,0 +1,242 @@
+import { describe, expect, it, vi } from 'vitest';
+import { defineData, defineSchema, table } from '../src/index.js';
+import { memoryStorage } from './storage.js';
+
+type Message = { channel: string; author: string; body: string; at: number; pinned?: boolean; embedding?: number[] };
+
+const schema = defineSchema({
+  messages: table<Message>({
+    indexes: { by_channel: ['channel', 'at'] },
+    search: { body: { field: 'body', filters: ['channel'] } },
+    vectors: { embedding: { field: 'embedding', dimensions: 3, filters: ['channel'] } },
+    topics: (m) => [`messages:channel:${m.channel}`],
+  }),
+});
+
+function setup(options: { onCommit?: (topics: string[]) => void; seed?: boolean } = {}) {
+  const calls: string[] = [];
+  const data = defineData({
+    schema,
+    functions: ({ query, mutation }) => ({
+      send: mutation((ctx, a: { channel: string; body: string; at?: number }) =>
+        ctx.db.insert('messages', { channel: a.channel, author: 'ann', body: a.body, at: a.at ?? ctx.now }),
+      ),
+      sendThenFail: mutation((ctx, a: { channel: string }) => {
+        ctx.db.insert('messages', { channel: a.channel, author: 'x', body: 'lost', at: 1 });
+        ctx.scheduler.runAfter(1000, 'ping', { n: 1 });
+        throw new Error('boom');
+      }),
+      edit: mutation((ctx, a: { id: string; body: string }) => ctx.db.patch('messages', a.id, { body: a.body })),
+      remove: mutation((ctx, a: { id: string }) => ctx.db.delete('messages', a.id)),
+      later: mutation((ctx, a: { ms: number; id?: string }) => ctx.scheduler.runAfter(a.ms, 'ping', { n: 1 }, { id: a.id })),
+      cancel: mutation((ctx, a: { id: string }) => ctx.scheduler.cancel(a.id)),
+      list: query((ctx, a: { channel: string; limit: number }) =>
+        ctx.db.query('messages').withIndex('by_channel', (q) => q.eq('channel', a.channel)).order('desc').take(a.limit).map((m) => m.body),
+      ),
+      since: query((ctx, a: { channel: string; at: number }) =>
+        ctx.db.query('messages').withIndex('by_channel', (q) => q.eq('channel', a.channel).gte('at', a.at)).collect().map((m) => m.body),
+      ),
+      find: query((ctx, a: { text: string; channel?: string }) =>
+        ctx.db.search('messages', 'body', a.text, { eq: a.channel ? { channel: a.channel } : undefined }).map((m) => m.body),
+      ),
+      nearest: query((ctx, a: { v: number[]; channel?: string }) =>
+        ctx.db.vectorSearch('messages', 'embedding', a.v, { eq: a.channel ? { channel: a.channel } : undefined, limit: 2 }).map((r) => r.doc.body),
+      ),
+      embed: mutation((ctx, a: { id: string; v: number[] }) => ctx.db.patch('messages', a.id, { embedding: a.v })),
+      count: query((ctx) => ctx.db.query('messages').collect().length),
+    }),
+    jobs: (job) => ({
+      ping: job((ctx, a: { n: number }) => {
+        calls.push(`ping:${a.n}:${ctx.attempt}`);
+      }),
+      flaky: job(() => {
+        calls.push('flaky');
+        throw new Error('nope');
+      }),
+      cascade: job(async (ctx) => {
+        await ctx.data.mutate.send({ channel: 'jobs', body: 'from a job' });
+      }),
+    }),
+    onCommit: options.onCommit ? (topics) => options.onCommit!(topics) : undefined,
+    maxJobAttempts: 2,
+  });
+  const storage = memoryStorage();
+  const engine = data.engine(storage);
+  engine.init();
+  const call = {
+    q: (name: string, args?: unknown) => engine.run('query', name, args) as Promise<any>,
+    m: (name: string, args?: unknown) => engine.run('mutation', name, args) as Promise<any>,
+  };
+  return { call, engine, storage, calls, data };
+}
+
+describe('documents and indexes', () => {
+  it('inserts, reads through an index in both directions and takes a limit', async () => {
+    const { call } = setup();
+    for (let i = 1; i <= 4; i++) await call.m('send', { channel: 'general', body: `m${i}`, at: i });
+    await call.m('send', { channel: 'other', body: 'x', at: 9 });
+    expect(await call.q('list', { channel: 'general', limit: 2 })).toEqual(['m4', 'm3']);
+    expect(await call.q('since', { channel: 'general', at: 3 })).toEqual(['m3', 'm4']);
+  });
+
+  it('patches, removes a field set to undefined, and deletes', async () => {
+    const { call, engine } = setup();
+    const id = await call.m('send', { channel: 'a', body: 'one', at: 1 });
+    await call.m('edit', { id, body: 'two' });
+    expect(await call.q('list', { channel: 'a', limit: 5 })).toEqual(['two']);
+    await call.m('remove', { id });
+    expect(await call.q('count')).toBe(0);
+    await expect(engine.run('mutation', 'remove', { id })).rejects.toThrow(/no document/);
+  });
+
+  it('rejects an index query that skips a field', async () => {
+    const { storage } = setup();
+    const { DbReader } = await import('../src/index.js');
+    const db = new DbReader(storage, schema);
+    expect(() => db.query('messages').withIndex('by_channel', (q) => q.gte('at', 1))).toThrow(/expects "channel"/);
+  });
+
+  it('rolls back writes and scheduled jobs when a mutation throws', async () => {
+    const { call, storage } = setup();
+    await expect(call.m('sendThenFail', { channel: 'a' })).rejects.toThrow('boom');
+    expect(await call.q('count')).toBe(0);
+    expect(storage.alarm()).toBeNull();
+  });
+});
+
+describe('search and vectors', () => {
+  it('ranks full text matches, matches prefixes, filters by channel, and follows edits and deletes', async () => {
+    const { call } = setup();
+    const a = await call.m('send', { channel: 'dev', body: 'deploying the worker to production' });
+    await call.m('send', { channel: 'dev', body: 'lunch plans' });
+    await call.m('send', { channel: 'ops', body: 'worker queue is backed up' });
+    expect((await call.q('find', { text: 'worker' })).sort()).toEqual(['deploying the worker to production', 'worker queue is backed up']);
+    expect(await call.q('find', { text: 'worker', channel: 'ops' })).toEqual(['worker queue is backed up']);
+    expect(await call.q('find', { text: 'prod' })).toEqual(['deploying the worker to production']);
+    expect(await call.q('find', { text: 'AND OR "' })).toEqual([]);
+    await call.m('edit', { id: a, body: 'rollback finished' });
+    expect(await call.q('find', { text: 'production' })).toEqual([]);
+    expect(await call.q('find', { text: 'rollback' })).toEqual(['rollback finished']);
+    await call.m('remove', { id: a });
+    expect(await call.q('find', { text: 'rollback' })).toEqual([]);
+  });
+
+  it('finds the nearest vectors by cosine, with a filter', async () => {
+    const { call } = setup();
+    const x = await call.m('send', { channel: 'a', body: 'x axis' });
+    const y = await call.m('send', { channel: 'a', body: 'y axis' });
+    const z = await call.m('send', { channel: 'b', body: 'near x, other channel' });
+    await call.m('embed', { id: x, v: [1, 0, 0] });
+    await call.m('embed', { id: y, v: [0, 1, 0] });
+    await call.m('embed', { id: z, v: [0.9, 0.1, 0] });
+    expect(await call.q('nearest', { v: [1, 0, 0] })).toEqual(['x axis', 'near x, other channel']);
+    expect(await call.q('nearest', { v: [1, 0, 0], channel: 'a' })).toEqual(['x axis', 'y axis']);
+    await expect(call.q('nearest', { v: [1, 0] })).rejects.toThrow(/dimensions/);
+  });
+
+  it('rebuilds a search index from the documents when its definition changes', async () => {
+    const { call, storage } = setup();
+    await call.m('send', { channel: 'a', body: 'hello world' });
+    const { defineData: d } = await import('../src/index.js');
+    const changed = d({
+      schema: defineSchema({ messages: table<Message>({ search: { body: { field: 'author' } } }) }),
+      functions: ({ query }) => ({ find: query((ctx) => ctx.db.search('messages', 'body', 'ann').map((m) => m.body)) }),
+    }).engine(storage);
+    changed.init();
+    expect(await changed.run('query', 'find', undefined)).toEqual(['hello world']);
+  });
+});
+
+describe('live topics', () => {
+  it('reports table, document and custom topics after a commit, and none for a rollback or a read', async () => {
+    const onCommit = vi.fn();
+    const { call } = setup({ onCommit });
+    const id = await call.m('send', { channel: 'general', body: 'hi' });
+    expect(onCommit.mock.calls[0]![0].sort()).toEqual(['messages', `messages:${id}`, 'messages:channel:general'].sort());
+    await call.q('count');
+    await expect(call.m('sendThenFail', { channel: 'x' })).rejects.toThrow();
+    expect(onCommit).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not fail a mutation when publishing throws', async () => {
+    const { call } = setup({ onCommit: () => { throw new Error('down'); } });
+    const err = vi.spyOn(console, 'error').mockImplementation(() => {});
+    await expect(call.m('send', { channel: 'a', body: 'x' })).resolves.toBeTypeOf('string');
+    err.mockRestore();
+  });
+});
+
+describe('scheduler', () => {
+  it('arms the alarm for the earliest job, runs due jobs, and clears the alarm', async () => {
+    const { call, engine, storage, calls } = setup();
+    const before = Date.now();
+    await call.m('later', { ms: 60_000 });
+    await call.m('later', { ms: 5_000 });
+    expect(storage.alarm()).toBeGreaterThanOrEqual(before + 5_000);
+    expect(storage.alarm()).toBeLessThan(before + 10_000);
+    await engine.alarm();
+    expect(calls).toEqual([]);
+    vi.useFakeTimers({ now: Date.now() + 61_000 });
+    await engine.alarm();
+    vi.useRealTimers();
+    expect(calls).toEqual(['ping:1:1', 'ping:1:1']);
+    expect(storage.alarm()).toBeNull();
+  });
+
+  it('cancels a pending job, and a job id replaces the pending one', async () => {
+    const { call, engine, storage, calls } = setup();
+    const id = await call.m('later', { ms: 1000 });
+    expect(await call.m('cancel', { id })).toBe(true);
+    expect(await call.m('cancel', { id })).toBe(false);
+    expect(storage.alarm()).toBeNull();
+    await call.m('later', { ms: 50_000, id: 'debounce' });
+    await call.m('later', { ms: 1_000, id: 'debounce' });
+    expect(storage.db.prepare('SELECT COUNT(*) AS n FROM _jobs').get()).toEqual({ n: 1 });
+    vi.useFakeTimers({ now: Date.now() + 2_000 });
+    await engine.alarm();
+    vi.useRealTimers();
+    expect(calls).toEqual(['ping:1:1']);
+  });
+
+  it('retries a failing job with backoff, then parks it as failed', async () => {
+    const { engine, storage, calls } = setup();
+    const scheduler = engine.scheduler();
+    scheduler.runAfter(0, 'flaky', null, { id: 'f' });
+    const err = vi.spyOn(console, 'error').mockImplementation(() => {});
+    await engine.alarm();
+    expect(scheduler.get('f')).toMatchObject({ status: 'pending', attempts: 1, error: 'nope' });
+    expect(storage.alarm()).toBeGreaterThan(Date.now());
+    vi.useFakeTimers({ now: Date.now() + 10_000 });
+    await engine.alarm();
+    vi.useRealTimers();
+    err.mockRestore();
+    expect(scheduler.get('f')).toMatchObject({ status: 'failed', attempts: 2 });
+    expect(calls).toEqual(['flaky', 'flaky']);
+    expect(storage.alarm()).toBeNull();
+  });
+
+  it('lets a job call data functions, and rejects unknown job names', async () => {
+    const { call, engine } = setup();
+    engine.scheduler().runAfter(0, 'cascade');
+    await engine.alarm();
+    expect(await call.q('list', { channel: 'jobs', limit: 1 })).toEqual(['from a job']);
+    expect(() => engine.scheduler().runAfter(0, 'missing')).toThrow(/no job named/);
+  });
+});
+
+describe('client', () => {
+  it('calls a Durable Object namespace by name and types functions from their definitions', async () => {
+    const { data, engine } = setup();
+    const ns = {
+      idFromName: (n: string) => n,
+      get: () => ({ run: (kind: 'query' | 'mutation', name: string, args: unknown) => engine.run(kind, name, args), job: async () => null }),
+    };
+    const client = data.client(ns);
+    const id = await client.mutate.send({ channel: 'c', body: 'typed' });
+    expect(typeof id).toBe('string');
+    expect(await client.query.list({ channel: 'c', limit: 1 })).toEqual(['typed']);
+    expect(await client.query.count()).toBe(1);
+    // @ts-expect-error unknown function
+    expect(() => client.query.nope).not.toThrow();
+  });
+});
