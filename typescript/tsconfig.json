@@ -6,6 +6,9 @@
     { "path": "packages/mcp" },
     { "path": "packages/ai" },
     { "path": "packages/analytics" },
-    { "path": "packages/cli" }
+    { "path": "packages/cli" },
+    { "path": "packages/data" },
+    { "path": "packages/live" },
+    { "path": "packages/void" }
   ]
 }

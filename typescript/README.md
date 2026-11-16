@@ -40,6 +40,9 @@ Argument of type '() => Promise<{ ids: never[]; }>' is not assignable to paramet
 | `@eeao/ai` | Worker | Tool definitions for the Anthropic API and the AI SDK, with approval holds | none |
 | `@eeao/analytics` | Worker | Workers Analytics Engine (default), PostHog, fan-out, in-memory | none |
 | `@eeao/cli` | Node 20+ / Bun | `eeao` command driven by the Worker's manifest, bearer token auth | none |
+| `@eeao/data` | Durable Object | One object per deployment: transactional SQLite documents, indexes, FTS5, exact vector search, delayed and cancellable jobs on alarms | none |
+| `@eeao/live` | Browser | `useQuery`/`useMutation` over any transport: an RPC call plus topic subscriptions, refetched on events and reconnects | peer: `react` (optional) |
+| `@eeao/void` | Vite / Void | The only package that knows Void: plugin and middleware, `voidTransport`, `createVoidLive`, `publishTopics`, `topicPolicy` | peers: `void`, `vite` |
 
 The Worker side uses Web APIs only, with no `nodejs_compat`.
 
@@ -172,3 +175,62 @@ mostly the MCP SDK and Zod.
 - Session-cookie auth provider (the example uses API tokens; `anyOf()` combines providers).
 - OAuth for MCP clients; MCP calls currently authenticate with the same bearer token.
 - Publishing to npm (needs a real name).
+
+## Data and live queries
+
+`@eeao/data` replaces the document store a Convex-style backend gives you. Functions run
+inside one Durable Object, so a mutation is one SQLite transaction (`transactionSync`),
+and anything it schedules commits or rolls back with it. Procedures stay the only API: they
+call the typed client.
+
+```ts
+export const data = defineData({
+  schema: defineSchema({
+    messages: table<Message>({
+      indexes: { by_channel: ['channel', 'at'] },
+      search: { body: { field: 'body', filters: ['channel'] } },     // FTS5
+      topics: (m) => [`messages:channel:${m.channel}`],              // live topics on change
+    }),
+  }),
+  functions: ({ query, mutation }) => ({
+    send: mutation((ctx, a: { channel: string; body: string }) => {
+      const id = ctx.db.insert('messages', { ...a, at: ctx.now });
+      ctx.scheduler.runAfter(60_000, 'nudge', { id }, { id: `nudge:${a.channel}` }); // debounce by id
+      return id;
+    }),
+    list: query((ctx, a: { channel: string }) =>
+      ctx.db.query('messages').withIndex('by_channel', (q) => q.eq('channel', a.channel)).order('desc').take(50)),
+  }),
+  jobs: (job) => ({ nudge: job(async (ctx, a: { id: string }) => { /* may be async; retried with backoff */ }) }),
+  onCommit: publishTopics(live),     // from @eeao/void/data; any (topics, env) => void works
+});
+export class Deployment extends data.durableObject(DurableObject) {}   // bind it, new_sqlite_classes
+// in a procedure: data.client(env.DEPLOYMENT).mutate.send(input)
+```
+
+Every write reports the topics it touched (`table`, `table:id`, plus the table's `topics`).
+`onCommit` publishes them. Jobs are at least once: a job that throws is retried with
+backoff and then parked as `failed`; give a job a stable `id` to replace a pending one or
+`scheduler.cancel(id)` it. Search and vector indexes rebuild from the documents when their
+definition changes. Vector search is exact (cosine over the filtered rows).
+
+`@eeao/live` is the client half. Void's live streams deliver at most once and replay
+nothing, so an event only means "this query may be stale": the store refetches, collapses
+bursts, shares one fetch between components asking the same thing, keeps the last good data
+on an error, and refetches everything when the transport reconnects or the tab is shown again.
+
+```ts
+// src/live.ts
+import { connectLiveStream } from 'void/live/client';
+import { createVoidLive } from '@eeao/void/react';
+export const { useQuery, useMutation, live } = createVoidLive<typeof registry>({
+  client: createClient<typeof registry>('/rpc'),
+  connect: connectLiveStream,
+  topics: { 'messages.list': (i) => [`messages:channel:${i.channel}`] },
+});
+// component: const messages = useQuery('messages.list', { channel });
+// server: defineLiveStream({ id: 'app', onSubscribe: topicPolicy([{ pattern: /^messages:channel:(.+)$/, allow: ... }]) })
+```
+
+Always set `onSubscribe` (`topicPolicy` refuses any topic without a matching rule).
+`examples/chat-worker` runs the data layer in workerd (`npm run e2e`).

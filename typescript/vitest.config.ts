@@ -6,9 +6,10 @@ const pkg = (name: string, file = 'index') => fileURLToPath(new URL(`./packages/
 export default defineConfig({
   resolve: {
     alias: [
+      { find: '@eeao/live/react', replacement: pkg('live', 'react') },
       { find: '@eeao/http/client', replacement: pkg('http', 'client') },
-      ...['core', 'http', 'mcp', 'ai', 'analytics', 'cli'].map((n) => ({ find: `@eeao/${n}`, replacement: pkg(n) })),
+      ...['core', 'http', 'mcp', 'ai', 'analytics', 'cli', 'data', 'live'].map((n) => ({ find: `@eeao/${n}`, replacement: pkg(n) })),
     ],
   },
-  test: { include: ['packages/*/test/**/*.test.ts', 'examples/*/test/**/*.test.ts'] },
+  test: { include: ['packages/*/test/**/*.test.{ts,tsx}', 'examples/*/test/**/*.test.ts'] },
 });
