@@ -301,3 +301,15 @@ export function createProcedures<Env = unknown>() {
 }
 
 export const { procedure, profile } = createProcedures<unknown>();
+
+/**
+ * Gives an unnamed procedure (or an unfinished builder) its registered name. An explicit
+ * `procedure('name')` keeps its own name.
+ */
+export function withProcedureName<P extends { readonly name: string }>(p: P, name: string): P {
+  if (p.name) {
+    return p;
+  }
+  const named = { ...p, name };
+  return (Object.isFrozen(p) ? Object.freeze(named) : named) as P;
+}
