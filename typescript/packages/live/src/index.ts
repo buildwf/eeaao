@@ -2,12 +2,12 @@ import type { InputOf, OutputOf, Registry } from '@eeao/core';
 
 /**
  * What the live client needs of a registry: its procedure map, which is a type and nothing at runtime. A `Registry` has
- * one, and so does a plain `{ '~procedures': ProcedureMap }` (Void generates the map from the procedures folder).
+ * one, and so does a plain `{ '~procedures': ProcedureMap }` (Nosam generates the map from the procedures folder).
  */
 export type Typed = { readonly '~procedures'?: unknown };
 
 /**
- * How a client hears about changes. Void's `connectLiveStream` is one (see `@eeao/void/live`);
+ * How a client hears about changes. Nosam's `connectLiveStream` is one (see `@eeao/nosam/live`);
  * anything with topics and a reconnect signal works. Delivery may be at most once, so the
  * store never trusts an event's payload: an event only means "this query may be stale".
  */

@@ -2,7 +2,7 @@ import { describe, expectTypeOf, it } from 'vitest';
 import type { Live, Procs, Typed } from '../src/index.js';
 import type { AnyProcedure } from '@eeao/core';
 
-// A generated procedure map (what `void` emits) is a plain `{ '~procedures': Map }`, not a Registry.
+// A generated procedure map (what `nosam` emits) is a plain `{ '~procedures': Map }`, not a Registry.
 type Map = { 'count.get': AnyProcedure };
 type Typed1 = { readonly '~procedures'?: Map };
 
