@@ -6,19 +6,19 @@ That makes it a good fit for code written by AI agents, because every choice sho
 
 The TypeScript implementation lives in [`typescript/`](typescript/README.md). It has the builder, an HTTP handler, MCP, AI tools, analytics, a CLI, a Durable Object data layer and live queries.
 
-## Works with Void
+## Works with the bwf CLI
 
-[Void](https://void.cloud) (npm package `void`, from VoidZero) is a framework for Cloudflare Workers built on Vite. `@eeao/void` is the one package that knows about it. Nothing else here imports Void, and a test keeps it that way.
+[bwf](https://github.com/buildwf/fif-spa) is a framework and CLI for Cloudflare Workers built on Vite. `@eeao/bwf` is the one package here that knows about it. Nothing else imports bwf, and a test keeps it that way.
 
-`@eeao/void` gives a Void app:
+`@eeao/bwf` gives a bwf app:
 
-- a Vite plugin that finds your procedures in `src/procedures/`, builds the registry and fails the build when a plain Void route skips the nine decisions
+- a Vite plugin that finds your procedures in `src/procedures/`, builds the registry and fails the build when a plain bwf route skips the nine decisions
 - one middleware file that serves `/rpc`, `/mcp` and the AI tool endpoints
-- live queries over Void's live streams, and the hookup for `@eeao/data`
+- live queries over bwf's live streams, and the hookup for `@eeao/data`
 
-It's tested against stock Void 1.10. The demo in [`void/demo`](void/demo/README.md) is a complete Void app, and `npm run demo` there runs every surface against a real dev server. Void needs Node 24.22 or newer.
+The demo in [`bwf/demo`](bwf/demo/README.md) is a complete bwf app, and `npm run demo` there runs every surface against a real dev server. It needs Node 24.22 or newer, and the `@buildwf/bwf` package.
 
-Forks of Void that rename the package still work. The adapter doesn't import the host package, and it accepts either generated bindings type.
+The adapter doesn't import the host package, and it accepts the generated bindings type.
 
 ## Try it
 
@@ -33,7 +33,7 @@ npm run check
 | Folder | What's in it |
 | --- | --- |
 | `typescript/` | The packages (`@eeao/*`), examples and tests |
-| `void/` | The plan for the Void adapter and a demo Void app |
+| `bwf/` | A demo bwf app and spikes for the adapter |
 
 ## License
 

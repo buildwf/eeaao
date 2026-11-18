@@ -1,10 +1,10 @@
 node_modules/
 dist/
-.void/
+.bwf/
 .wrangler/
 .cloudflare/
 .cli/
-.void-wrangler.jsonc
+.bwf-wrangler.jsonc
 *.tsbuildinfo
 .env
 .env.*
