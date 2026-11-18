@@ -53,6 +53,17 @@ function setup(options: { onCommit?: (topics: string[]) => void; seed?: boolean 
         calls.push('flaky');
         throw new Error('nope');
       }),
+      slow: job(
+        async () => {
+          calls.push('slow:start');
+          await new Promise((r) => setTimeout(r, 300));
+          calls.push('slow:end');
+        },
+        { concurrent: true },
+      ),
+      quick: job(() => {
+        calls.push('quick');
+      }),
       cascade: job(async (ctx) => {
         await ctx.data.mutate.send({ channel: 'jobs', body: 'from a job' });
       }),
@@ -213,6 +224,29 @@ describe('scheduler', () => {
     expect(scheduler.get('f')).toMatchObject({ status: 'failed', attempts: 2 });
     expect(calls).toEqual(['flaky', 'flaky']);
     expect(storage.alarm()).toBeNull();
+  });
+
+  it("doesn't let a long concurrent job hold up the jobs behind it, and still runs plain jobs one at a time", async () => {
+    const { engine, calls } = setup();
+    const scheduler = engine.scheduler();
+    scheduler.runAfter(0, 'slow', null, { id: 's1' });
+    scheduler.runAfter(0, 'slow', null, { id: 's2' });
+    scheduler.runAfter(0, 'quick', null, { id: 'q' });
+    await engine.alarm();
+    expect(calls).toEqual(['slow:start', 'slow:start', 'quick', 'slow:end', 'slow:end']);
+    expect(scheduler.get('s1')).toBeNull();
+    expect(scheduler.get('q')).toBeNull();
+  });
+
+  it('runs a job left pending by a restart once the object starts', async () => {
+    const { engine, storage, calls } = setup();
+    engine.scheduler().runAfter(0, 'quick', null, { id: 'left' });
+    await storage.deleteAlarm();
+    expect(storage.alarm()).toBeNull();
+    await engine.rearm();
+    expect(storage.alarm()).not.toBeNull();
+    await engine.alarm();
+    expect(calls).toEqual(['quick']);
   });
 
   it('lets a job call data functions, and rejects unknown job names', async () => {
