@@ -1,0 +1,302 @@
+Void dev server: http://localhost:5174
+Tokens: demo-alice (admin, org o1), demo-bob (member, org o1), demo-grace (member, org o2)
+
+==============================================================================
+1. HTTP: one POST per procedure, every outcome the pipeline produces
+==============================================================================
+
+$ No auth needed (status opted out of auth, with a reason)
+  POST /rpc/status  
+200 {"data":{"ok":true,"contacts":3}}
+
+$ Signed in, own org: 200
+  POST /rpc/contacts.get  (Bearer demo-bob)  {"orgId":"o1","id":"c1"}
+200 {"data":{"id":"c1","orgId":"o1","name":"Ada Lovelace","email":"ada@example.com"}}
+
+$ No token: 401 from the auth decision
+  POST /rpc/contacts.get  {"orgId":"o1","id":"c1"}
+401 {"error":{"code":"UNAUTHENTICATED","message":"Authentication required"}}
+
+$ Bad token: 401
+  POST /rpc/contacts.get  (Bearer not-a-token)  {"orgId":"o1","id":"c1"}
+401 {"error":{"code":"UNAUTHENTICATED","message":"Authentication required"}}
+
+$ Invalid input: 400 with issues from the input schema
+  POST /rpc/contacts.get  (Bearer demo-bob)  {"orgId":1}
+400 {"error":{"code":"INVALID_INPUT","message":"Input did not match the schema","issues":[{"message":"Invalid input: expected string, received number","path":"orgId"},{"message":"Invalid input: expected string, received undefined","path":"id"}]}}
+
+$ Another org: 403 from the authz policy "same-org"
+  POST /rpc/contacts.get  (Bearer demo-bob)  {"orgId":"o2","id":"c3"}
+403 {"error":{"code":"FORBIDDEN","message":"Not allowed"}}
+
+$ Declared error: 404 NOT_FOUND
+  POST /rpc/contacts.get  (Bearer demo-bob)  {"orgId":"o1","id":"nope"}
+404 {"error":{"code":"NOT_FOUND","message":"No such contact"}}
+
+$ Defaults from the input schema (limit = 10)
+  POST /rpc/contacts.search  (Bearer demo-bob)  {"orgId":"o1","query":"a"}
+200 {"data":{"results":[{"id":"c1","name":"Ada Lovelace"},{"id":"c2","name":"Alan Turing"}]}}
+
+$ A write
+  POST /rpc/contacts.create  (Bearer demo-bob)  {"orgId":"o1","name":"Katherine Johnson","email":"katherine@example.com"}
+200 {"data":{"id":"c7db4a6c3","orgId":"o1","name":"Katherine Johnson","email":"katherine@example.com"}}
+
+$ Same email again: declared error 409 DUPLICATE_EMAIL
+  POST /rpc/contacts.create  (Bearer demo-bob)  {"orgId":"o1","name":"K. Johnson","email":"katherine@example.com"}
+409 {"error":{"code":"DUPLICATE_EMAIL","message":"A contact with this email already exists"}}
+
+$ Admin-only profile, as a member: 403
+  POST /rpc/contacts.delete  (Bearer demo-bob)  {"id":"c7db4a6c3"}
+403 {"error":{"code":"FORBIDDEN","message":"Not allowed"}}
+
+$ Admin-only profile, as an admin: 200
+  POST /rpc/contacts.delete  (Bearer demo-alice)  {"id":"c7db4a6c3"}
+200 {"data":{"deleted":true}}
+
+$ noInput(): a body is rejected
+  POST /rpc/me  (Bearer demo-bob)  {"sneaky":true}
+400 {"error":{"code":"INVALID_INPUT","message":"Input did not match the schema","issues":[{"message":"This procedure takes no input","path":""}]}}
+
+$ noInput(): empty body is fine
+  POST /rpc/me  (Bearer demo-grace)  
+200 {"data":{"id":"u-grace","orgId":"o2","role":"member"}}
+
+$ Webhook, no auth, validated input
+  POST /rpc/billing.paymentReceived  {"orgId":"o1","amountCents":4900,"currency":"usd"}
+200 {"data":{"received":true}}
+
+$ Webhook, declared error 422
+  POST /rpc/billing.paymentReceived  {"orgId":"x9","amountCents":4900,"currency":"usd"}
+422 {"error":{"code":"UNKNOWN_ORG","message":"No such organization"}}
+
+$ Unknown procedure: 404
+  POST /rpc/contacts.explode  (Bearer demo-bob)  {}
+404 {"error":{"code":"NOT_FOUND_PROCEDURE","message":"No such procedure"}}
+
+$ GET instead of POST: 405
+  GET /rpc/contacts.get
+405 {"error":{"code":"METHOD_NOT_ALLOWED","message":"Use POST"}}
+
+==============================================================================
+2. Generated documents: OpenAPI (every procedure) and the CLI manifest (only .cli() ones)
+==============================================================================
+
+$ GET /rpc/openapi.json  (paths only)
+/rpc/billing.paymentReceived
+/rpc/contacts.get
+/rpc/contacts.search
+/rpc/contacts.create
+/rpc/contacts.delete
+/rpc/me
+/rpc/status
+
+$ GET /rpc/manifest.json  (names only; each entry carries JSON Schema)
+contacts.get
+contacts.search
+contacts.create
+me
+status
+
+==============================================================================
+3. MCP: Streamable HTTP at /mcp, only procedures that chose .mcp()
+==============================================================================
+
+$ tools/list  (name, then the annotations set by mcp({ effect }))
+contacts_get     {"readOnlyHint":true,"destructiveHint":false,"idempotentHint":true,"openWorldHint":false}
+contacts_search  {"readOnlyHint":true,"destructiveHint":false,"idempotentHint":true,"openWorldHint":false}
+contacts_create  {"readOnlyHint":false,"destructiveHint":false,"openWorldHint":false}
+contacts_delete  {"readOnlyHint":false,"destructiveHint":true,"openWorldHint":false}
+me               {"readOnlyHint":true,"destructiveHint":false,"idempotentHint":true,"openWorldHint":false}
+
+$ tools/call contacts_search { orgId: "o1", query: "tur" }
+{
+  "results": [
+    {
+      "id": "c2",
+      "name": "Alan Turing"
+    }
+  ]
+}
+
+$ tools/call contacts_get for another org (same authz as HTTP)
+{
+  "isError": true,
+  "content": "{\"error\":{\"code\":\"FORBIDDEN\",\"message\":\"Not allowed\"}}"
+}
+
+$ tools/call contacts_create with bad input (same validation as HTTP)
+{
+  "isError": true,
+  "content": "{\"error\":{\"code\":\"INVALID_INPUT\",\"message\":\"Input did not match the schema\",\"issues\":[{\"message\":\"Too small: expected string to have >=1 characters\",\"path\":\"name\"},{\"message\":\"Invalid email address\",\"path\":\"email\"}]}}"
+}
+
+==============================================================================
+4. CLI: commands come from /rpc/manifest.json; flags from the input schema
+==============================================================================
+
+$ eeao
+Usage: eeao [--url URL] [--token TOKEN] <command> [flags]
+       EEAO_URL and EEAO_TOKEN are read from the environment.
+
+Commands:
+  contacts create  Create a contact
+  contacts get     Print one contact as JSON
+  contacts search  Search contacts by name
+  status           Check that the API is up
+  whoami           Print the user and organization for EEAO_TOKEN
+
+Run "eeao <command> --help" for its flags.
+
+$ eeao whoami
+{
+  "id": "u-bob",
+  "orgId": "o1",
+  "role": "member"
+}
+
+$ eeao contacts search --help
+contacts search: Search contacts by name
+
+  --org-id <string> (required)
+  --query <string> (required)
+  --limit <integer>
+  --json <object>  pass the whole input as JSON
+
+$ eeao contacts search --org-id o1 --query a --limit 1
+{
+  "results": [
+    {
+      "id": "c1",
+      "name": "Ada Lovelace"
+    }
+  ]
+}
+
+$ eeao contacts get --org-id o1 --id nope
+error NOT_FOUND: No such contact
+(exit code 1)
+
+$ eeao contacts get --org-id o2 --id c3
+error FORBIDDEN: Not allowed
+(exit code 1)
+
+$ eeao contacts delete --id c1   (admin-only profile chose noCli)
+eeao: unknown command "contacts delete"
+
+Usage: eeao [--url URL] [--token TOKEN] <command> [flags]
+       EEAO_URL and EEAO_TOKEN are read from the environment.
+
+Commands:
+  contacts create  Create a contact
+  contacts get     Print one contact as JSON
+  contacts search  Search contacts by name
+  status           Check that the API is up
+  whoami           Print the user and organization for EEAO_TOKEN
+
+Run "eeao <command> --help" for its flags.
+(exit code 2)
+
+$ eeao contacts search   (missing required flags)
+eeao: missing --org-id, --query
+
+contacts search: Search contacts by name
+
+  --org-id <string> (required)
+  --query <string> (required)
+  --limit <integer>
+  --json <object>  pass the whole input as JSON
+(exit code 2)
+
+==============================================================================
+5. AI tools: only procedures that chose .aiTool(); the agent acts as the token's user
+==============================================================================
+
+$ GET /rpc/ai/tools.json  (pass straight to messages.create({ tools }))
+contacts_search  Search contacts in an organization by name. Returns ids and names only.
+contacts_create  Create a contact in an organization
+contacts_delete  Delete a contact permanently
+me               Get the current user id, organization id and role
+
+$ needsApproval: false runs right away
+  POST /rpc/ai/run {"tool":"contacts_search","input":{"orgId":"o1","query":"ada"}}
+{
+  "status": "ok",
+  "tool_result": {
+    "content": "{\"results\":[{\"id\":\"c1\",\"name\":\"Ada Lovelace\"}]}",
+    "is_error": false
+  }
+}
+
+$ needsApproval: true is held until a person approves
+  POST /rpc/ai/run {"tool":"contacts_create","input":{"orgId":"o1","name":"Hedy Lamarr","email":"hedy@example.com"}}
+{
+  "status": "needs_approval",
+  "tool_result": {
+    "content": "{\"error\":{\"code\":\"NEEDS_APPROVAL\",\"message\":\"A person must approve this call first\"}}",
+    "is_error": true
+  }
+}
+
+$ ... and runs once approved
+  POST /rpc/ai/run {"tool":"contacts_create","input":{"orgId":"o1","name":"Hedy Lamarr","email":"hedy@example.com"},"approved":true}
+{
+  "status": "ok",
+  "tool_result": {
+    "content": "{\"id\":\"c9680db45\",\"orgId\":\"o1\",\"name\":\"Hedy Lamarr\",\"email\":\"hedy@example.com\"}",
+    "is_error": false
+  }
+}
+
+$ Agents get the user's permissions: grace (org o2) asking about o1
+  POST /rpc/ai/run {"tool":"contacts_search","input":{"orgId":"o1","query":"a"}}
+{
+  "status": "ok",
+  "tool_result": {
+    "content": "{\"error\":{\"code\":\"FORBIDDEN\",\"message\":\"Not allowed\"}}",
+    "is_error": true
+  }
+}
+
+$ contacts.get chose noAiTool, so there is no such tool
+  POST /rpc/ai/run {"tool":"contacts_get","input":{"orgId":"o1","id":"c1"}}
+{
+  "status": "unknown_tool",
+  "tool_result": {
+    "content": "{\"error\":{\"code\":\"UNKNOWN_TOOL\",\"message\":\"No tool contacts_get\"}}",
+    "is_error": true
+  }
+}
+
+==============================================================================
+6. Audit: every decision for every procedure, snapshotted to audit.md for review
+==============================================================================
+
+$ GET /rpc/audit.md  (dev only)
+| procedure | profiles | authn | authz | input | output | errors | analytics | mcp | cli | aiTool |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| billing.paymentReceived | - | none: Called by the payment provider, which has no user token | none: No user; the payload is checked against the provider instead | schema(zod) | schema(zod) | UNKNOWN_ORG | event(payment.received) | none: Only the payment provider calls this endpoint | none: Only the payment provider calls this endpoint | none: Only the payment provider calls this endpoint |
+| contacts.create | signed-in | auth(api-token) [signed-in] | policy(same-org) | schema(zod) | schema(zod) | DUPLICATE_EMAIL | event(contact.created) | tool(write) | command(contacts create) | tool(needs approval) |
+| contacts.delete | admin-only | auth(api-token) [admin-only] | policy(admin) [admin-only] | schema(zod) | schema(zod) | NOT_FOUND | event(contact.deleted) | tool(destructive) | none: Admin actions ship through the dashboard only [admin-only] | tool(needs approval) |
+| contacts.get | signed-in | auth(api-token) [signed-in] | policy(same-org) | schema(zod) | schema(zod) | NOT_FOUND | event(contact.viewed) | tool(read) | command(contacts get) | none: Returns email addresses; agents use contacts.search, which leaves them out |
+| contacts.search | signed-in | auth(api-token) [signed-in] | policy(same-org) | schema(zod) | schema(zod) | none: An empty result is a valid answer, not an error | event(contacts.searched) | tool(read) | command(contacts search) | tool(no approval) |
+| me | signed-in | auth(api-token) [signed-in] | none: Callers only ever see their own identity | none | schema(zod) | none: The only failure is a missing token, which is a 401 | none: Clients call this on every start; it says nothing about usage | tool(read) | command(whoami) | tool(no approval) |
+| status | - | none: Uptime checks run without credentials | none: Anyone may see whether the service is up | none | schema(zod) | none: Status always answers; failures surface as 500s | none: Health checks every few seconds would drown real events | none: Agents have no use for an uptime probe | command(status) | none: Agents have no use for an uptime probe |
+
+==============================================================================
+7. Analytics: one event per call that reached the handler (dev also logs them)
+==============================================================================
+
+$ events logged by the dev server (Analytics Engine gets the same ones)
+contact.viewed     http ok    200  actor=u-bob {"orgId":"o1"}
+contact.viewed     http error 404  actor=u-bob {"orgId":"o1"}
+contacts.searched  http ok    200  actor=u-bob {"orgId":"o1","limit":10}
+contact.created    http ok    200  actor=u-bob {"orgId":"o1"}
+contact.created    http error 409  actor=u-bob {"orgId":"o1"}
+contact.deleted    http ok    200  actor=u-alice {}
+payment.received   http ok    200  actor=- {"orgId":"o1","amountCents":4900,"currency":"usd"}
+payment.received   http error 422  actor=- {"orgId":"x9","amountCents":4900,"currency":"usd"}
+contacts.searched  mcp  ok    200  actor=u-bob {"orgId":"o1","limit":10}
+contacts.searched  cli  ok    200  actor=u-bob {"orgId":"o1","limit":1}
+contact.viewed     cli  error 404  actor=u-bob {"orgId":"o1"}
+contacts.searched  ai   ok    200  actor=u-bob {"orgId":"o1","limit":10}
+contact.created    ai   ok    200  actor=u-bob {"orgId":"o1"}

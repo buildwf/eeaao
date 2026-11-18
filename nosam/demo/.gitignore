@@ -1,7 +1,0 @@
-node_modules/
-.nosam/
-.nosam-wrangler.jsonc
-.cloudflare/
-.cli/
-dist/
-.env
