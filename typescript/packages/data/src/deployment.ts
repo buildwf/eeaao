@@ -40,6 +40,8 @@ export type JobCtx<F> = {
   /** Runs one of the data functions in this object, the same way a procedure would. */
   data: DataClient<F>;
 };
+/** `concurrent`: a job that runs long or waits on others, so it doesn't hold up the rest. By default jobs run one at a time. */
+export type JobOptions = { concurrent?: boolean };
 export type JobFn<F = any, A = any> = (ctx: JobCtx<F>, args: A) => void | Promise<void>;
 
 // ---------------------------------------------------------------------------- definition
@@ -48,7 +50,7 @@ export type DataDefinition<S extends Schema, F extends Record<string, AnyFn>, J 
   schema: S;
   functions: (fn: FunctionBuilders<S>) => F;
   /** Handlers for `scheduler.runAfter(ms, name, args)`. They may be async and call other services. */
-  jobs?: (job: <A = void>(run: JobFn<F, A>) => JobFn<F, A>) => J;
+  jobs?: (job: <A = void>(run: JobFn<F, A>, options?: JobOptions) => JobFn<F, A>) => J;
   /**
    * Called after a mutation commits, with the topics it touched (`table`, `table:id`, plus
    * table `topics`). Publish them to your live transport here. Errors are logged, never
@@ -88,7 +90,7 @@ export function defineData<S extends Schema, F extends Record<string, AnyFn>, J 
   def: DataDefinition<S, F, J>,
 ): Data<S, F, J> {
   const functions = def.functions({ query: (run) => ({ kind: 'query', run }) as any, mutation: (run) => ({ kind: 'mutation', run }) as any });
-  const jobs = def.jobs?.((run) => run) ?? ({} as J);
+  const jobs = def.jobs?.((run, options) => (options?.concurrent ? Object.assign((ctx: any, args: any) => run(ctx, args), { concurrent: true }) : run)) ?? ({} as J);
   const resolved = { ...def, functions, jobs };
   const engine = (storage: DataStorage, env: unknown = {}) => new Engine(storage, env, resolved as any);
 
@@ -104,7 +106,10 @@ export function defineData<S extends Schema, F extends Record<string, AnyFn>, J 
           const [ctx, env] = args as [{ storage: DataStorage; blockConcurrencyWhile<T>(fn: () => Promise<T>): Promise<T> }, unknown];
           this.#engine = engine(ctx.storage, env);
           // Schema sync is synchronous, but block anyway so no request sees a half-built table.
-          void ctx.blockConcurrencyWhile(async () => this.#engine.init());
+          void ctx.blockConcurrencyWhile(async () => {
+            this.#engine.init();
+            await this.#engine.rearm();
+          });
         }
         run(kind: 'query' | 'mutation', name: string, args: unknown) {
           return this.#engine.run(kind, name, args);
@@ -166,26 +171,52 @@ export class Engine {
     return result;
   }
 
-  /** Durable Object alarm: runs every due job, then arms the alarm for the next one. */
+  /**
+   * Durable Object alarm: runs the due jobs, then arms the alarm for the next one. Jobs run one at a time, except those
+   * defined `concurrent` (a bot's turn can take minutes): those start at once and don't hold up the rest. Each job id
+   * runs once at a time. The alarm stays up while any job runs, and picks up jobs queued meanwhile.
+   */
   async alarm(): Promise<void> {
     const scheduler = this.scheduler();
     const max = this.def.maxJobAttempts ?? 5;
+    const running = new Set<string>();
+    const active: Promise<void>[] = [];
+    let serial = false;
     for (;;) {
-      const due = scheduler.due(Date.now(), 20);
-      if (!due.length) break;
-      for (const job of due) {
-        const handler = this.def.jobs[job.name];
-        try {
-          if (!handler) throw new Error(`no job named "${job.name}"`);
-          await handler({ env: this.env, id: job.id, attempt: job.attempts + 1, data: this.dataClient() }, job.args);
-          scheduler.done(job);
-        } catch (e) {
-          console.error(`job ${job.name} (${job.id}) failed`, e);
-          scheduler.fail(job, e instanceof Error ? e.message : String(e), max, Date.now());
-        }
+      for (const job of scheduler.due(Date.now(), 50)) {
+        if (running.has(job.id)) continue;
+        const concurrent = !!(this.def.jobs[job.name] as { concurrent?: boolean } | undefined)?.concurrent;
+        if (!concurrent && serial) continue;
+        if (!concurrent) serial = true;
+        running.add(job.id);
+        const done = this.runJob(scheduler, job, max).finally(() => {
+          running.delete(job.id);
+          if (!concurrent) serial = false;
+          active.splice(active.indexOf(done), 1);
+        });
+        active.push(done);
       }
+      if (!active.length) break;
+      await Promise.race([...active, new Promise((r) => setTimeout(r, 1000))]);
     }
     await this.arm(scheduler);
+  }
+
+  private async runJob(scheduler: Scheduler, job: ScheduledJob, max: number): Promise<void> {
+    const handler = this.def.jobs[job.name];
+    try {
+      if (!handler) throw new Error(`no job named "${job.name}"`);
+      await handler({ env: this.env, id: job.id, attempt: job.attempts + 1, data: this.dataClient() }, job.args);
+      scheduler.done(job);
+    } catch (e) {
+      console.error(`job ${job.name} (${job.id}) failed`, e);
+      scheduler.fail(job, e instanceof Error ? e.message : String(e), max, Date.now());
+    }
+  }
+
+  /** Arms the alarm for the earliest pending job. A restart can leave jobs pending with no alarm set, so the object calls this when it starts. */
+  async rearm(): Promise<void> {
+    await this.arm(this.scheduler());
   }
 
   private dataClient(): DataClient<any> {
