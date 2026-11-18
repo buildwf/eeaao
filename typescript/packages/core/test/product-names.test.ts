@@ -1,17 +1,14 @@
 import { execFileSync } from 'node:child_process';
 import { describe, expect, it } from 'vitest';
 
-// This repository is part of the product: it takes an app as input and doesn't know which app it is. The app we build on it
-// is one of those apps, so its name has no place in product code, tests, docs or package manifests. The reasons
-// are in docs/scopes.md in that app's repository.
+// This repository takes an app as input and doesn't know which app it is, so no app's name belongs in code, tests, docs
+// or package manifests. That keeps it reusable and ready to open up.
 //
 // The name is built from two parts so that this file passes its own check.
 const appName = ['ded', 'worc'].join('');
 
 // A deliberate mention goes here with its reason. A row that matches no file fails, so the list stays current.
-const allowed: { file: string; reason: string }[] = [
-  { file: 'AGENTS.md', reason: 'Explains the product and our own setup to agents, and names the app.' },
-];
+const allowed: { file: string; reason: string }[] = [];
 
 function filesThatNameTheApp(): string[] {
   const root = execFileSync('git', ['rev-parse', '--show-toplevel'], { encoding: 'utf8' }).trim();
