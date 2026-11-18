@@ -1,0 +1,42 @@
+{
+  "compilerOptions": {
+    "target": "ES2023",
+    "lib": [
+      "ES2023",
+      "DOM",
+      "DOM.Iterable"
+    ],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "skipLibCheck": true,
+    "noEmit": true,
+    "allowImportingTsExtensions": true,
+    "types": [
+      "@buildwf/bwf/env",
+      "@cloudflare/workers-types"
+    ],
+    "paths": {
+      "@schema": [
+        "./db/schema.ts"
+      ],
+      "@eeao/bwf": [
+        "../../typescript/packages/bwf/src/index.ts"
+      ],
+      "@eeao/bwf/*": [
+        "../../typescript/packages/bwf/src/*.ts"
+      ],
+      "@eeao/*": [
+        "../../typescript/packages/*/src/index.ts"
+      ]
+    }
+  },
+  "include": [
+    "src",
+    "middleware",
+    "db",
+    ".bwf/**/*.d.ts",
+    "../../typescript/packages/bwf/src/virtual.d.ts"
+  ]
+}

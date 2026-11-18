@@ -1,0 +1,44 @@
+import { bearerAuth, createProcedures, type Registry } from '@eeao/core';
+
+declare global {
+  // bwf generates this from bwf.config.ts and your imports (.bwf/bindings.d.ts).
+  interface BwfGeneratedEnvBindings {}
+}
+
+/** The Worker env as bwf types it. No generic to pass. */
+export type BwfEnv = BwfGeneratedEnvBindings;
+
+export const { procedure, profile } = createProcedures<BwfEnv>();
+
+const sha256 = async (text: string) =>
+  [...new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text)))].map((b) => b.toString(16).padStart(2, '0')).join('');
+
+/**
+ * API tokens for the CLI, agents and scripts: `Authorization: Bearer <token>`. Only a
+ * SHA-256 hash is stored. `lookup` gets the hash and returns the caller or null.
+ * (A Better Auth session and API-key provider is the next step; see PLAN.md.)
+ */
+export function apiTokens<User extends { id: string }>(lookup: (hash: string) => Promise<User | null | undefined> | User | null | undefined) {
+  return bearerAuth<User, BwfEnv>({
+    name: 'api-token',
+    verify: async (token) => lookup(await sha256(token)),
+    actorId: (u) => u.id,
+  });
+}
+
+export { anyOf, bearerAuth } from '@eeao/core';
+
+let current: Registry | undefined;
+/** @internal The eeao middleware calls this when the Worker starts. */
+export function setAppRegistry(registry: Registry) {
+  current = registry;
+}
+
+/**
+ * The app's registry, for code that runs agents inside the Worker: pass it to
+ * anthropicTools() and runTool() from @eeao/ai.
+ */
+export function appRegistry(): Registry {
+  if (!current) throw new Error('appRegistry() is only available inside a request, after the eeao middleware has loaded');
+  return current;
+}
