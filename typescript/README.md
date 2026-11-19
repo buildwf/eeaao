@@ -1,4 +1,4 @@
-# eeao (TypeScript)
+# realtime (TypeScript)
 
 A procedure builder for Cloudflare Workers where every procedure must decide nine
 concerns before it compiles: authentication, authorization, input, output, errors,
@@ -39,7 +39,7 @@ Argument of type '() => Promise<{ ids: never[]; }>' is not assignable to paramet
 | `@builtbyfriends/realtime-mcp` | Worker | Stateless MCP over Streamable HTTP via Cloudflare's `createMcpHandler` (agents/mcp/server + MCP SDK v2) | peers: `agents`, `@modelcontextprotocol/server` |
 | `@builtbyfriends/realtime-ai` | Worker | Tool definitions for the Anthropic API and the AI SDK, with approval holds | none |
 | `@builtbyfriends/realtime-analytics` | Worker | Workers Analytics Engine (default), PostHog, fan-out, in-memory | none |
-| `@builtbyfriends/realtime-cli` | Node 20+ / Bun | `eeao` command driven by the Worker's manifest, bearer token auth | none |
+| `@builtbyfriends/realtime-cli` | Node 20+ / Bun | `realtime` command driven by the Worker's manifest, bearer token auth | none |
 | `@builtbyfriends/realtime-data` | Durable Object | One object per deployment: transactional SQLite documents, indexes, FTS5, exact vector search, delayed and cancellable jobs on alarms | none |
 | `@builtbyfriends/realtime-live` | Browser | `useQuery`/`useMutation` over any transport: an RPC call plus topic subscriptions, refetched on events and reconnects | peer: `react` (optional) |
 | `@builtbyfriends/realtime-bwf` | Vite / bwf | The only package that knows bwf: plugin and middleware, `bwfTransport`, `createBwfLive`, `publishTopics`, `topicPolicy` | peers: `@builtbyfriends/bwf`, `vite` |
@@ -129,13 +129,13 @@ const { content, is_error } = toolResultContent(run);      // tool_result block
 ## CLI
 
 ```
-$ EEAO_URL=https://api.example.com EEAO_TOKEN=... eeao
+$ REALTIME_URL=https://api.example.com REALTIME_TOKEN=... realtime
 Commands:
   contacts get     Print one contact as JSON
   contacts search  Search contacts by name
   status           Check that the API is up
 
-$ eeao contacts search --org-id o1 --query tur
+$ realtime contacts search --org-id o1 --query tur
 { "results": [{ "id": "c2", "name": "Alan Turing" }] }
 ```
 

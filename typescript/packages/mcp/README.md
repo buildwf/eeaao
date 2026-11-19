@@ -1,6 +1,6 @@
 # @builtbyfriends/realtime-mcp
 
-Stateless MCP server for an eeao registry on Cloudflare Workers.
+Stateless MCP server for an realtime registry on Cloudflare Workers.
 
 It's part of [Realtime](https://github.com/builtbyfriends/realtime), a procedure builder for Cloudflare Workers.
 

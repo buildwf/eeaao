@@ -18,6 +18,6 @@ export const whoami = procedure('whoami')
   .noAiTool({ reason: 'Spike only tests the HTTP path' })
   .handler(({ ctx }) => ({ id: ctx.id, orgId: ctx.orgId }));
 const procs: any[] = [whoami];
-if (process.env.EEAO_BROKEN) procs.push((procedure('broken') as any).noInput());
+if (process.env.REALTIME_BROKEN) procs.push((procedure('broken') as any).noInput());
 export const registry = defineRegistry(procs as any, { analytics: analyticsEngine({ binding: 'ANALYTICS' }) });
 export const rpc = rpcHandler(registry);

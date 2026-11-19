@@ -1,4 +1,4 @@
-// Fills the /__eeao call visualizers with real traffic, then leaves the dev server
+// Fills the /__realtime call visualizers with real traffic, then leaves the dev server
 // running so you can look around. Every surface is used: HTTP (each outcome), the CLI,
 // an MCP client, an agent calling /rpc/ai/run, and the in-app assistant chatting with a
 // scripted stand-in model (scripts/fake-model.mjs) that asks for an approval.
@@ -41,7 +41,7 @@ try {
     try { if ((await fetch(`${base}/rpc/status`, { method: 'POST' })).ok) break; } catch {}
     await new Promise((r) => setTimeout(r, 500));
   }
-  await fetch(`${base}/__eeao/clear`, { method: 'POST' });
+  await fetch(`${base}/__realtime/clear`, { method: 'POST' });
 
   step('HTTP: 200, 401, 400, 403, 404, 409, a rejected body, a webhook 422');
   await rpc('contacts.get', { orgId: 'o1', id: 'c1' }, 'demo-bob');
@@ -55,10 +55,10 @@ try {
   await rpc('billing.paymentReceived', { orgId: 'x9', amountCents: 4900, currency: 'usd' });
   await rpc('billing.paymentReceived', { orgId: 'o1', amountCents: 4900, currency: 'usd' });
 
-  step('CLI: the real eeao CLI, built from the manifest');
-  if (!existsSync(`${root}.cli/eeao.mjs`)) execFileSync('node', ['scripts/build-cli.mjs'], { cwd: root, stdio: 'ignore' });
+  step('CLI: the real realtime CLI, built from the manifest');
+  if (!existsSync(`${root}.cli/realtime.mjs`)) execFileSync('node', ['scripts/build-cli.mjs'], { cwd: root, stdio: 'ignore' });
   for (const args of [['whoami'], ['contacts', 'search', '--org-id', 'o1', '--query', 'a', '--limit', '2'], ['contacts', 'get', '--org-id', 'o2', '--id', 'c3']]) {
-    try { execFileSync('node', ['.cli/eeao.mjs', ...args], { cwd: root, env: { ...process.env, EEAO_URL: base, EEAO_TOKEN: 'demo-bob' }, stdio: 'ignore' }); } catch {}
+    try { execFileSync('node', ['.cli/realtime.mjs', ...args], { cwd: root, env: { ...process.env, REALTIME_URL: base, REALTIME_TOKEN: 'demo-bob' }, stdio: 'ignore' }); } catch {}
   }
 
   step('MCP: a real client lists tools and calls three of them');
@@ -89,7 +89,7 @@ try {
   const held = await rpc('assistant.ask', { orgId: 'o1', messages: [{ role: 'user', content: 'Add Katherine Johnson (katherine@example.com) to our contacts.' }] }, 'demo-alice');
   step(`  alice: paused on ${held.body?.data?.pending?.map((p) => p.tool).join(', ')}, left waiting for approval`);
 
-  console.log(`\nOpen ${base}/__eeao  (Network, MCP and AI chat)`);
+  console.log(`\nOpen ${base}/__realtime  (Network, MCP and AI chat)`);
   if (once) stop();
 } catch (e) {
   stop();

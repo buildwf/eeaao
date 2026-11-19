@@ -1,7 +1,7 @@
 {
   "name": "@builtbyfriends/realtime-analytics",
   "version": "0.1.0",
-  "description": "Analytics providers for eeao: Workers Analytics Engine, PostHog",
+  "description": "Analytics providers for realtime: Workers Analytics Engine, PostHog",
   "type": "module",
   "sideEffects": false,
   "exports": {

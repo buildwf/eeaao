@@ -14,12 +14,12 @@ export type McpHandlerOptions = Omit<CreateMcpHandlerOptions, 'route'> & {
 
 /**
  * A schema the MCP SDK accepts that only carries JSON Schema. Validation stays in the
- * eeao pipeline, so MCP calls get the same 400s, auth and analytics as HTTP calls.
+ * realtime pipeline, so MCP calls get the same 400s, auth and analytics as HTTP calls.
  */
 const passthrough = (json: JsonSchema) => ({
   '~standard': {
     version: 1 as const,
-    vendor: 'eeao',
+    vendor: 'realtime',
     validate: (value: unknown) => ({ value }),
     jsonSchema: { input: () => json, output: () => json },
   },

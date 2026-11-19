@@ -3,7 +3,7 @@ import { existsSync, globSync, readFileSync, readdirSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-export type EeaoPluginOptions = {
+export type RealtimePluginOptions = {
   /** Where procedures live. Default "src/procedures" (bwf scans src/ for bindings, so @builtbyfriends/bwf/db etc. just work). */
   dir?: string;
   /** Analytics Engine binding. Default "ANALYTICS". Pass false only together with an explicit reason in code review. */
@@ -16,19 +16,19 @@ export type EeaoPluginOptions = {
   mcpRoute?: string;
 };
 
-const ID = 'virtual:eeao/registry';
+const ID = 'virtual:realtime/registry';
 const RESOLVED = '\0' + ID;
-const PAGE_ID = 'virtual:eeao/devtools-page';
+const PAGE_ID = 'virtual:realtime/devtools-page';
 const PAGE_RESOLVED = '\0' + PAGE_ID;
-const ALLOW_RE = /\/\/\s*eeao-allow:\s*(.+)/;
+const ALLOW_RE = /\/\/\s*realtime-allow:\s*(.+)/;
 
 /**
- * eeao for bwf. Finds every procedure in `src/procedures/`, builds the registry, and
- * checks the two things bwf cannot: that the eeao middleware file exists (it serves
+ * realtime for bwf. Finds every procedure in `src/procedures/`, builds the registry, and
+ * checks the two things bwf cannot: that the realtime middleware file exists (it serves
  * /rpc and /mcp and loads the registry at startup, which is the deploy gate) and that
  * no plain bwf route skips the nine decisions.
  */
-export function eeao(options: EeaoPluginOptions = {}): Plugin {
+export function realtime(options: RealtimePluginOptions = {}): Plugin {
   const dir = options.dir ?? 'src/procedures';
   const analytics = options.analyticsBinding ?? 'ANALYTICS';
   let root = process.cwd();
@@ -43,13 +43,13 @@ export function eeao(options: EeaoPluginOptions = {}): Plugin {
     const out: string[] = [];
     const mwDir = join(root, 'middleware');
     const stub = existsSync(mwDir) && readdirSync(mwDir).some((f) => readFileSync(join(mwDir, f), 'utf8').includes('@builtbyfriends/realtime-bwf/middleware'));
-    if (!stub) out.push('middleware/ has no eeao middleware. Run `npx eeao init`, or create middleware/00.eeao.ts containing: export { default } from \'@builtbyfriends/realtime-bwf/middleware\';');
+    if (!stub) out.push('middleware/ has no realtime middleware. Run `npx realtime init`, or create middleware/00.realtime.ts containing: export { default } from \'@builtbyfriends/realtime-bwf/middleware\';');
     const routesDir = join(root, 'routes');
     if (existsSync(routesDir)) {
       for (const f of globSync('**/*.{ts,tsx,js,jsx,mts,mjs}', { cwd: routesDir })) {
         const reason = ALLOW_RE.exec(readFileSync(join(routesDir, f), 'utf8'))?.[1]?.trim() ?? '';
         if (reason.split(/\s+/).filter(Boolean).length < 3)
-          out.push(`routes/${f} is a plain bwf route, so it skips auth, authz, input, output, errors, analytics, MCP, CLI and AI tool decisions. Move it to ${dir}/ as a procedure, or keep it and add "// eeao-allow: <why this must be a raw route>" (at least three words).`);
+          out.push(`routes/${f} is a plain bwf route, so it skips auth, authz, input, output, errors, analytics, MCP, CLI and AI tool decisions. Move it to ${dir}/ as a procedure, or keep it and add "// realtime-allow: <why this must be a raw route>" (at least three words).`);
       }
     }
     if (procedureFiles().length === 0) out.push(`${dir}/ has no procedures.`);
@@ -57,14 +57,14 @@ export function eeao(options: EeaoPluginOptions = {}): Plugin {
   };
 
   return {
-    name: 'eeao:bwf',
+    name: 'realtime:bwf',
     configResolved(config) {
       root = config.root;
       dev = config.command === 'serve';
     },
     buildStart() {
       const found = problems();
-      if (found.length) this.error(`eeao found ${found.length} problem(s):\n  - ${found.join('\n  - ')}`);
+      if (found.length) this.error(`realtime found ${found.length} problem(s):\n  - ${found.join('\n  - ')}`);
     },
     resolveId(id) {
       if (id === ID) return RESOLVED;
@@ -82,7 +82,7 @@ export function eeao(options: EeaoPluginOptions = {}): Plugin {
         ...files.map((f, i) => `import * as m${i} from ${JSON.stringify('/' + f)};`),
         // Pick up unfinished builders too, so a procedure missing .handler() fails instead of vanishing.
         `const found = [${files.map((_, i) => `...Object.values(m${i})`).join(', ')}]`,
-        `  .filter((v) => v && (v['~eeao'] === 'procedure' || v['~eeao'] === 'builder'));`,
+        `  .filter((v) => v && (v['~realtime'] === 'procedure' || v['~realtime'] === 'builder'));`,
         `const console_ = { name: 'console', track: (e) => console.log('[analytics]', JSON.stringify(e)) };`,
         `const ae = analyticsEngine({ binding: ${JSON.stringify(analytics)} });`,
         `export const registry = defineRegistry(found, { analytics: ${logEvents ? 'fanOut(ae, console_)' : 'ae'} });`,
@@ -95,7 +95,7 @@ export function eeao(options: EeaoPluginOptions = {}): Plugin {
       server.printUrls = () => {
         printUrls();
         const url = server.resolvedUrls?.local[0];
-        if (url) server.config.logger.info(`  \x1b[32m➜\x1b[0m  \x1b[1meeao\x1b[0m:    \x1b[36m${url.replace(/\/$/, '')}/__eeao\x1b[0m  (network, MCP and AI chat visualizers)`);
+        if (url) server.config.logger.info(`  \x1b[32m➜\x1b[0m  \x1b[1mrealtime\x1b[0m:    \x1b[36m${url.replace(/\/$/, '')}/__realtime\x1b[0m  (network, MCP and AI chat visualizers)`);
       };
       // A new or deleted procedure file changes the registry module itself.
       const reload = (file: string) => {
@@ -105,7 +105,7 @@ export function eeao(options: EeaoPluginOptions = {}): Plugin {
           if (mod) env.moduleGraph.invalidateModule(mod);
         }
       };
-      // Editing the devtools page itself (when working on eeao) reloads it.
+      // Editing the devtools page itself (when working on realtime) reloads it.
       const pagePath = fileURLToPath(new URL('./devtools.html', import.meta.url));
       server.watcher.add(pagePath);
       server.watcher.on('change', (file) => {

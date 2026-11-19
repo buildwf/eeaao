@@ -50,7 +50,7 @@ try {
 
   const cli = (...args) => {
     try {
-      return { code: 0, out: execFileSync('node', [join(root, 'packages/cli/dist/bin.js'), ...args], { env: { ...process.env, EEAO_URL: base, EEAO_TOKEN: 't-bob' }, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }) };
+      return { code: 0, out: execFileSync('node', [join(root, 'packages/cli/dist/bin.js'), ...args], { env: { ...process.env, REALTIME_URL: base, REALTIME_TOKEN: 't-bob' }, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }) };
     } catch (e) {
       return { code: e.status, out: e.stdout, err: e.stderr };
     }
@@ -76,7 +76,7 @@ try {
     assert.equal(JSON.parse(denied.content[0].text).error.code, 'FORBIDDEN');
   });
   await client.close();
-  assert.doesNotMatch(log, /\[eeao\]/, 'no unexpected errors logged');
+  assert.doesNotMatch(log, /\[realtime\]/, 'no unexpected errors logged');
 } finally {
   dev.kill('SIGTERM');
 }
@@ -84,7 +84,7 @@ try {
 // The deploy gate: bundle a Worker that hides missing decisions behind `as any` with
 // esbuild (no type checking, like wrangler deploy), then load it the way Cloudflare does.
 await check('Deploy gate: an esbuild bundle with missing decisions throws at load', async () => {
-  const out = mkdtempSync(join(tmpdir(), 'eeao-broken-'));
+  const out = mkdtempSync(join(tmpdir(), 'realtime-broken-'));
   execFileSync(wrangler, ['deploy', '--dry-run', '--outdir', out, '--name', 'broken', 'test/broken-worker.ts'], { cwd: example, stdio: 'ignore' });
   await assert.rejects(import(join(out, 'broken-worker.js')), /"sneaky": undecided: authz, input, errors, analytics, mcp, cli, aiTool/);
 });

@@ -103,7 +103,7 @@ export interface Registry<P extends readonly AnyProcedure[] = readonly AnyProced
   /** Run one procedure through the full pipeline: authn, input, authz, handler, output, analytics. */
   call(name: string, input: unknown, exec: Exec): Promise<CallResult>;
   /**
-   * Every call as it runs, step by step, for dev tools such as the /__eeao page. Nothing
+   * Every call as it runs, step by step, for dev tools such as the /__realtime page. Nothing
    * is recorded until something subscribes, so production pays nothing for it.
    */
   readonly trace: {
@@ -145,9 +145,9 @@ export function defineRegistry<const P extends readonly AnyProcedure[]>(
 
   procedures.forEach((p, index) => {
     const label = typeof p?.name === 'string' ? `"${p.name}"` : `#${index}`;
-    if (!p || p['~eeao'] !== 'procedure') {
+    if (!p || p['~realtime'] !== 'procedure') {
       problems.push(
-        (p as any)?.['~eeao'] === 'builder'
+        (p as any)?.['~realtime'] === 'builder'
           ? `${label}: not finished; decide every concern and call .handler(fn)`
           : `${label}: not a procedure (build it with procedure(name)... .handler(fn))`,
       );
@@ -248,7 +248,7 @@ export function defineRegistry<const P extends readonly AnyProcedure[]>(
   });
 
   if (problems.length) {
-    throw new Error(`eeao registry has ${problems.length} problem(s):\n  - ${problems.join('\n  - ')}`);
+    throw new Error(`realtime registry has ${problems.length} problem(s):\n  - ${problems.join('\n  - ')}`);
   }
 
   const handlers = new Map(procedures.map((p) => [p.name, p.handler]));
@@ -259,13 +259,13 @@ export function defineRegistry<const P extends readonly AnyProcedure[]>(
       try {
         fn(event);
       } catch (e) {
-        console.error('[eeao] trace listener failed:', e);
+        console.error('[realtime] trace listener failed:', e);
       }
     }
   };
   const onError =
     options.onError ??
-    ((error, info) => console.error(`[eeao] ${info.procedure} (${info.surface}) failed at ${info.stage}:`, error));
+    ((error, info) => console.error(`[realtime] ${info.procedure} (${info.surface}) failed at ${info.stage}:`, error));
 
   async function call(name: string, rawInput: unknown, exec: Exec): Promise<CallResult> {
     if (!listeners.size) return run(name, rawInput, exec, null);

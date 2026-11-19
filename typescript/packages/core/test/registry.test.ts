@@ -102,7 +102,7 @@ describe('registry load-time checks (the deploy gate)', () => {
 
   it('throws at definition time when a profile and a procedure decide the same concern', () => {
     const p = (procedure('x') as any).noCli(R('Not useful from a terminal'));
-    const prof = (procedure as any) && { '~eeao': 'profile', name: 'p', decisions: { cli: { kind: 'none', reason: 'Not useful from a terminal' } } };
+    const prof = (procedure as any) && { '~realtime': 'profile', name: 'p', decisions: { cli: { kind: 'none', reason: 'Not useful from a terminal' } } };
     expect(() => p.use(prof)).toThrow(/cli is decided here and in profile "p"/);
   });
 });

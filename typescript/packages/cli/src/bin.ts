@@ -9,7 +9,7 @@ run({
 }).then(
   (code) => process.exit(code),
   (e) => {
-    process.stderr.write(`eeao: ${(e as Error).message}\n`);
+    process.stderr.write(`realtime: ${(e as Error).message}\n`);
     process.exit(1);
   },
 );

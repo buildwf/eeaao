@@ -132,13 +132,13 @@ function listHelp(manifest: Manifest): string {
   const cmds = manifest.procedures.map((p) => p.cli!).sort((a, b) => a.command.localeCompare(b.command));
   const width = Math.max(0, ...cmds.map((c) => c.command.length));
   return [
-    'Usage: eeao [--url URL] [--token TOKEN] <command> [flags]',
-    '       EEAO_URL and EEAO_TOKEN are read from the environment.',
+    'Usage: realtime [--url URL] [--token TOKEN] <command> [flags]',
+    '       REALTIME_URL and REALTIME_TOKEN are read from the environment.',
     '',
     'Commands:',
     ...cmds.map((c) => `  ${c.command.padEnd(width)}  ${c.description}`),
     '',
-    'Run "eeao <command> --help" for its flags.',
+    'Run "realtime <command> --help" for its flags.',
   ].join('\n') + '\n';
 }
 
@@ -155,14 +155,14 @@ export async function run(io: Io): Promise<number> {
     const [, v] = flags.splice(i, 1)[0]!;
     return v;
   };
-  const url = (take('url') as string | undefined) ?? io.env.EEAO_URL;
-  const token = (take('token') as string | undefined) ?? io.env.EEAO_TOKEN;
-  const basePath = io.env.EEAO_BASE_PATH ?? '/rpc';
+  const url = (take('url') as string | undefined) ?? io.env.REALTIME_URL;
+  const token = (take('token') as string | undefined) ?? io.env.REALTIME_TOKEN;
+  const basePath = io.env.REALTIME_BASE_PATH ?? '/rpc';
   const help = take('help') !== undefined || words[0] === 'help';
   if (words[0] === 'help') words.shift();
 
   if (!url) {
-    io.stderr('eeao: set --url or EEAO_URL to your Worker, e.g. https://api.example.com\n');
+    io.stderr('realtime: set --url or REALTIME_URL to your Worker, e.g. https://api.example.com\n');
     return 2;
   }
   const origin = url.replace(/\/$/, '');
@@ -172,7 +172,7 @@ export async function run(io: Io): Promise<number> {
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     manifest = (await res.json()) as Manifest;
   } catch (e) {
-    io.stderr(`eeao: could not load ${origin}${basePath}/manifest.json: ${(e as Error).message}\n`);
+    io.stderr(`realtime: could not load ${origin}${basePath}/manifest.json: ${(e as Error).message}\n`);
     return 1;
   }
 
@@ -184,7 +184,7 @@ export async function run(io: Io): Promise<number> {
     .sort((a, b) => b.cli!.command.length - a.cli!.command.length)[0];
 
   if (!entry) {
-    if (words.length && !help) io.stderr(`eeao: unknown command "${words.join(' ')}"\n\n`);
+    if (words.length && !help) io.stderr(`realtime: unknown command "${words.join(' ')}"\n\n`);
     (words.length && !help ? io.stderr : io.stdout)(listHelp(manifest));
     return words.length && !help ? 2 : 0;
   }
@@ -194,7 +194,7 @@ export async function run(io: Io): Promise<number> {
     return 0;
   }
   if (extra.length) {
-    io.stderr(`eeao: unexpected argument "${extra[0]}". Pass values as flags.\n\n${commandHelp(entry)}`);
+    io.stderr(`realtime: unexpected argument "${extra[0]}". Pass values as flags.\n\n${commandHelp(entry)}`);
     return 2;
   }
 
@@ -203,13 +203,13 @@ export async function run(io: Io): Promise<number> {
     input = inputFromFlags(entry, flags);
   } catch (e) {
     if (!(e instanceof UsageError)) throw e;
-    io.stderr(`eeao: ${e.message}\n\n${commandHelp(entry)}`);
+    io.stderr(`realtime: ${e.message}\n\n${commandHelp(entry)}`);
     return 2;
   }
 
   const res = await f(`${origin}${entry.path}`, {
     method: 'POST',
-    headers: { 'content-type': 'application/json', 'x-eeao-surface': 'cli', ...(token ? { authorization: `Bearer ${token}` } : {}) },
+    headers: { 'content-type': 'application/json', 'x-realtime-surface': 'cli', ...(token ? { authorization: `Bearer ${token}` } : {}) },
     body: input === undefined ? '' : JSON.stringify(input),
   });
   const body = (await res.json().catch(() => ({}))) as { data?: unknown; error?: { code: string; message: string; issues?: { path: string; message: string }[] } };
@@ -220,6 +220,6 @@ export async function run(io: Io): Promise<number> {
   const err = body.error ?? { code: 'INTERNAL', message: `HTTP ${res.status}` };
   io.stderr(`error ${err.code}: ${err.message}\n`);
   for (const i of err.issues ?? []) io.stderr(`  ${i.path ? `--${kebab(i.path.split('.')[0]!)}` : 'input'}: ${i.message}\n`);
-  if (res.status === 401) io.stderr('Set --token or EEAO_TOKEN to an API token.\n');
+  if (res.status === 401) io.stderr('Set --token or REALTIME_TOKEN to an API token.\n');
   return 1;
 }

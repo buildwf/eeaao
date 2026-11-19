@@ -89,22 +89,22 @@ try {
   await client.close();
 
   h('4. CLI: commands come from /rpc/manifest.json; flags from the input schema');
-  if (!existsSync(`${root}.cli/eeao.mjs`)) execFileSync('node', ['scripts/build-cli.mjs'], { cwd: root, stdio: 'inherit' });
+  if (!existsSync(`${root}.cli/realtime.mjs`)) execFileSync('node', ['scripts/build-cli.mjs'], { cwd: root, stdio: 'inherit' });
   const cli = (args, token = 'demo-bob') => {
     try {
-      return execFileSync('node', ['.cli/eeao.mjs', ...args], { cwd: root, env: { ...process.env, EEAO_URL: base, EEAO_TOKEN: token }, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
+      return execFileSync('node', ['.cli/realtime.mjs', ...args], { cwd: root, env: { ...process.env, REALTIME_URL: base, REALTIME_TOKEN: token }, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
     } catch (e) {
       return `${e.stdout ?? ''}${e.stderr ?? ''}(exit code ${e.status})`;
     }
   };
-  show('eeao', cli([]));
-  show('eeao whoami', cli(['whoami']));
-  show('eeao contacts search --help', cli(['contacts', 'search', '--help']));
-  show('eeao contacts search --org-id o1 --query a --limit 1', cli(['contacts', 'search', '--org-id', 'o1', '--query', 'a', '--limit', '1']));
-  show('eeao contacts get --org-id o1 --id nope', cli(['contacts', 'get', '--org-id', 'o1', '--id', 'nope']));
-  show('eeao contacts get --org-id o2 --id c3', cli(['contacts', 'get', '--org-id', 'o2', '--id', 'c3']));
-  show('eeao contacts delete --id c1   (admin-only profile chose noCli)', cli(['contacts', 'delete', '--id', 'c1']));
-  show('eeao contacts search   (missing required flags)', cli(['contacts', 'search']));
+  show('realtime', cli([]));
+  show('realtime whoami', cli(['whoami']));
+  show('realtime contacts search --help', cli(['contacts', 'search', '--help']));
+  show('realtime contacts search --org-id o1 --query a --limit 1', cli(['contacts', 'search', '--org-id', 'o1', '--query', 'a', '--limit', '1']));
+  show('realtime contacts get --org-id o1 --id nope', cli(['contacts', 'get', '--org-id', 'o1', '--id', 'nope']));
+  show('realtime contacts get --org-id o2 --id c3', cli(['contacts', 'get', '--org-id', 'o2', '--id', 'c3']));
+  show('realtime contacts delete --id c1   (admin-only profile chose noCli)', cli(['contacts', 'delete', '--id', 'c1']));
+  show('realtime contacts search   (missing required flags)', cli(['contacts', 'search']));
 
   h('5. AI tools: only procedures that chose .aiTool(); the agent acts as the token\'s user');
   const defs = await (await fetch(`${base}/rpc/ai/tools.json`)).json();

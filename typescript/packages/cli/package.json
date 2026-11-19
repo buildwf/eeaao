@@ -1,10 +1,10 @@
 {
   "name": "@builtbyfriends/realtime-cli",
   "version": "0.1.0",
-  "description": "Command line client for an eeao Worker, driven by its manifest",
+  "description": "Command line client for an realtime Worker, driven by its manifest",
   "type": "module",
   "bin": {
-    "eeao": "./dist/bin.js"
+    "realtime": "./dist/bin.js"
   },
   "exports": {
     ".": {

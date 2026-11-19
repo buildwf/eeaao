@@ -1,6 +1,6 @@
 # @builtbyfriends/realtime-cli
 
-Command line client for an eeao Worker, driven by its manifest.
+Command line client for an realtime Worker, driven by its manifest.
 
 It's part of [Realtime](https://github.com/builtbyfriends/realtime), a procedure builder for Cloudflare Workers.
 

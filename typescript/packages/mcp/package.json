@@ -1,7 +1,7 @@
 {
   "name": "@builtbyfriends/realtime-mcp",
   "version": "0.1.0",
-  "description": "Stateless MCP server for an eeao registry on Cloudflare Workers",
+  "description": "Stateless MCP server for an realtime registry on Cloudflare Workers",
   "type": "module",
   "sideEffects": false,
   "exports": {

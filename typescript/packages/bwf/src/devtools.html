@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>eeao devtools</title>
+<title>realtime devtools</title>
 <style>
 /* Layout: top bar with three views; each view is a list on the left and the selected item's journey on the right. */
 :root {
@@ -143,7 +143,7 @@ details > summary { cursor: pointer; color: var(--muted); }
 </head>
 <body>
 <header>
-  <div class="brand">eeao <small id="appname"></small></div>
+  <div class="brand">realtime <small id="appname"></small></div>
   <nav role="tablist">
     <button role="tab" data-view="network" aria-selected="true">Network <span class="count" id="c-network">0</span></button>
     <button role="tab" data-view="mcp" aria-selected="false">MCP <span class="count" id="c-mcp">0</span></button>
@@ -420,11 +420,11 @@ document.addEventListener('keydown', (ev) => {
   }
 });
 document.addEventListener('input', (ev) => { if (ev.target.id === 'q') { state.q = ev.target.value; render(); } });
-$('#clear').addEventListener('click', async () => { await fetch('/__eeao/clear', { method: 'POST' }); state.ex.clear(); state.sel = {}; state.rev = 0; render(); });
+$('#clear').addEventListener('click', async () => { await fetch('/__realtime/clear', { method: 'POST' }); state.ex.clear(); state.sel = {}; state.rev = 0; render(); });
 
 async function poll() {
   try {
-    const r = await (await fetch('/__eeao/events?since=' + state.rev)).json();
+    const r = await (await fetch('/__realtime/events?since=' + state.rev)).json();
     $('#live').classList.remove('down');
     const keep = new Set(r.ids);
     for (const id of state.ex.keys()) if (!keep.has(id)) state.ex.delete(id);
@@ -439,7 +439,7 @@ async function poll() {
   setTimeout(poll, 800);
 }
 (async () => {
-  try { state.reg = await (await fetch('/__eeao/registry')).json(); $('#appname').textContent = `${state.reg.app.name} · dev`; } catch {}
+  try { state.reg = await (await fetch('/__realtime/registry')).json(); $('#appname').textContent = `${state.reg.app.name} · dev`; } catch {}
   render();
   poll();
 })();

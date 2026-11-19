@@ -13,7 +13,7 @@ type AnalyticsEngineDataset = {
  *   blob5 = error code, blob6 = actor id, blob7 = props as JSON
  *   double1 = HTTP status, double2 = handler duration in ms
  *
- * wrangler.jsonc: "analytics_engine_datasets": [{ "binding": "ANALYTICS", "dataset": "eeao_events" }]
+ * wrangler.jsonc: "analytics_engine_datasets": [{ "binding": "ANALYTICS", "dataset": "realtime_events" }]
  */
 export function analyticsEngine(options: { binding: string }): AnalyticsProvider {
   return {

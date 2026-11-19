@@ -1,11 +1,11 @@
-// Dev-only call visualizers for eeao apps, served at /__eeao by the eeao middleware.
+// Dev-only call visualizers for realtime apps, served at /__realtime by the realtime middleware.
 // It records every request the middleware answers (HTTP, CLI, MCP, AI tools), every
 // outbound fetch the Worker makes (including model API calls), and the step-by-step
 // trace of each procedure call. The middleware only loads this under `vite dev`, so
 // production builds leave it out entirely.
 import type { CallTrace, Registry, ToolGateTrace, TraceEvent } from '@builtbyfriends/realtime';
-// The page itself (devtools.html), inlined by the eeao() plugin as a string.
-import page from 'virtual:eeao/devtools-page';
+// The page itself (devtools.html), inlined by the realtime() plugin as a string.
+import page from 'virtual:realtime/devtools-page';
 
 type Kind = 'rpc' | 'mcp' | 'ai' | 'llm' | 'outbound' | 'direct';
 
@@ -14,7 +14,7 @@ type Exchange = {
   rev: number;
   at: number;
   kind: Kind;
-  /** For rpc: http or cli (from the x-eeao-surface header). */
+  /** For rpc: http or cli (from the x-realtime-surface header). */
   surface?: string;
   method: string;
   url: string;
@@ -80,7 +80,7 @@ function parseBody(text: string, contentType: string | null): unknown {
 export type Devtools = ReturnType<typeof createDevtools>;
 
 export function createDevtools(registry: Registry, app: { name: string; basePath: string; mcpRoute: string }) {
-  const route = '/__eeao';
+  const route = '/__realtime';
   const exchanges: Exchange[] = [];
   const byRequest = new WeakMap<Request, Exchange>();
   let seq = 0;
@@ -115,8 +115,8 @@ export function createDevtools(registry: Registry, app: { name: string; basePath
 
   // Outbound fetches: model APIs show in the AI chat view, everything else in Network.
   // Kept on globalThis so a hot reload of the middleware wraps the real fetch, not our wrapper.
-  const g = globalThis as typeof globalThis & { __eeaoFetch?: typeof fetch };
-  const original = (g.__eeaoFetch ??= globalThis.fetch.bind(globalThis));
+  const g = globalThis as typeof globalThis & { __realtimeFetch?: typeof fetch };
+  const original = (g.__realtimeFetch ??= globalThis.fetch.bind(globalThis));
   globalThis.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
     const request = new Request(input, init);
     const url = new URL(request.url);
@@ -189,7 +189,7 @@ export function createDevtools(registry: Registry, app: { name: string; basePath
       }
       return new Response(page, { headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' } });
     },
-    /** Runs the middleware for one request and records it when eeao answered it. */
+    /** Runs the middleware for one request and records it when realtime answered it. */
     async record(request: Request, waitUntil: (p: Promise<unknown>) => void, run: () => Promise<Response | null>): Promise<Response | null> {
       const url = new URL(request.url);
       const kind = kindOf(url.pathname);
@@ -198,7 +198,7 @@ export function createDevtools(registry: Registry, app: { name: string; basePath
       const ex = add({
         at: Date.now(),
         kind,
-        ...(kind === 'rpc' ? { surface: request.headers.get('x-eeao-surface') === 'cli' ? 'cli' : 'http' } : {}),
+        ...(kind === 'rpc' ? { surface: request.headers.get('x-realtime-surface') === 'cli' ? 'cli' : 'http' } : {}),
         method: request.method,
         url: request.url,
         path: url.pathname,

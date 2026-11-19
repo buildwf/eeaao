@@ -1,6 +1,6 @@
-# eeao on bwf: the demo
+# realtime on bwf: the demo
 
-A small contacts API built the way the [adapter](../../typescript/packages/bwf) is meant to be used: a bwf app with the `eeao()` Vite plugin, one middleware file, and one Analytics Engine line. Eight procedures cover every concern, every opt-out, profiles, a webhook, and all four surfaces (HTTP, MCP, CLI, AI tools). Data is in D1 through `@builtbyfriends/bwf/db`.
+A small contacts API built the way the [adapter](../../typescript/packages/bwf) is meant to be used: a bwf app with the `realtime()` Vite plugin, one middleware file, and one Analytics Engine line. Eight procedures cover every concern, every opt-out, profiles, a webhook, and all four surfaces (HTTP, MCP, CLI, AI tools). Data is in D1 through `@builtbyfriends/bwf/db`.
 
 Everything below was run for real on 2026-11-13. Full transcripts are in [output/demo.txt](output/demo.txt) and [output/failures.txt](output/failures.txt).
 
@@ -13,8 +13,8 @@ npm install          # also links ../../typescript/node_modules, so the demo use
 npx bwf db seed     # creates the local D1 database: 3 contacts, 3 API tokens
 npm run demo         # starts `vite dev`, calls every surface, prints what came back
 npm run failures     # shows every way an incomplete procedure gets stopped
-npm run dev          # just the app, at http://localhost:5173 (call visualizers at /__eeao)
-npm run visualize    # starts the app, sends traffic on every surface, then open /__eeao
+npm run dev          # just the app, at http://localhost:5173 (call visualizers at /__realtime)
+npm run visualize    # starts the app, sends traffic on every surface, then open /__realtime
 ```
 
 Tokens: `demo-alice` (admin, org o1), `demo-bob` (member, org o1), `demo-grace` (member, org o2).
@@ -25,8 +25,8 @@ The setup is three small pieces:
 
 | File | What it is |
 | --- | --- |
-| `vite.config.ts` | `plugins: [bwfPlugin(), eeao()]`. The source aliases below that are there so the demo runs on this repo's source. |
-| `middleware/00.eeao.ts` | One line, written by `npx eeao init`: `export { default } from '@builtbyfriends/realtime-bwf/middleware'` |
+| `vite.config.ts` | `plugins: [bwfPlugin(), realtime()]`. The source aliases below that are there so the demo runs on this repo's source. |
+| `middleware/00.realtime.ts` | One line, written by `npx realtime init`: `export { default } from '@builtbyfriends/realtime-bwf/middleware'` |
 | `bwf.config.ts` | The Analytics Engine line. bwf can't infer that binding from an import. |
 
 The rest is ordinary app code: procedures in `src/procedures/`, schema in `db/schema.ts`. There's no registry file, no route files and no Worker `fetch`, and `env` is typed without a generic.
@@ -64,10 +64,10 @@ POST /rpc/billing.paymentReceived  {"orgId":"x9",...}                 422 UNKNOW
 
 **MCP** (`/mcp`, real MCP client). Only the five procedures that chose `.mcp()` are listed. The `effect` decision sets the annotations, so `contacts_delete` carries `destructiveHint: true`. Calls go through the same auth, validation and authz as HTTP.
 
-**CLI** (`eeao`, built from the Worker's manifest). `contacts delete` doesn't exist because the `admin-only` profile chose `noCli`. Flags come from the input schema:
+**CLI** (`realtime`, built from the Worker's manifest). `contacts delete` doesn't exist because the `admin-only` profile chose `noCli`. Flags come from the input schema:
 
 ```
-$ eeao contacts search --help
+$ realtime contacts search --help
 contacts search: Search contacts by name
 
   --org-id <string> (required)
@@ -75,7 +75,7 @@ contacts search: Search contacts by name
   --limit <integer>
   --json <object>  pass the whole input as JSON
 
-$ eeao contacts get --org-id o2 --id c3
+$ realtime contacts get --org-id o2 --id c3
 error FORBIDDEN: Not allowed          (exit code 1)
 ```
 
@@ -112,7 +112,7 @@ Type 'string' is not assignable to type 'number'.                     (handler o
 **2. Load gate.** [failures/hidden-with-any.ts](failures/hidden-with-any.ts) hides its gaps with `as any`. `vite build` succeeds because bundlers don't type-check, but the built Worker refuses to start, so Cloudflare rejects the deploy:
 
 ```
-Uncaught Error: eeao registry has 8 problem(s):
+Uncaught Error: realtime registry has 8 problem(s):
   - "contacts.sneaky": undecided: authz, input, errors, analytics, mcp, cli, aiTool
   - "contacts.weak": authn opt-out: "todo" is a placeholder, not a reason
   ...
@@ -121,13 +121,13 @@ Uncaught Error: eeao registry has 8 problem(s):
 **3. Route guard.** A plain bwf route in `routes/` would skip all nine decisions, so the build fails:
 
 ```
-eeao found 1 problem(s):
+realtime found 1 problem(s):
   - routes/api/contacts.ts is a plain bwf route, so it skips auth, authz, input, output, errors, analytics,
     MCP, CLI and AI tool decisions. Move it to src/procedures/ as a procedure, or keep it and add
-    "// eeao-allow: <why this must be a raw route>" (at least three words).
+    "// realtime-allow: <why this must be a raw route>" (at least three words).
 ```
 
-**4. Escape hatch.** The same route builds fine once it states a reason, for example `// eeao-allow: Stripe needs a raw body for signature checks`.
+**4. Escape hatch.** The same route builds fine once it states a reason, for example `// realtime-allow: Stripe needs a raw body for signature checks`.
 
 **5. Missing middleware file.** Nothing would serve `/rpc` or load the registry at startup, so the build fails and says how to fix it.
 
@@ -135,18 +135,18 @@ eeao found 1 problem(s):
 
 - `../../typescript/packages/bwf/`: the new `@builtbyfriends/realtime-bwf` package (about 180 lines). It has three parts:
   - `plugin.ts` finds procedures and runs the route guard and stub check.
-  - `middleware.ts` serves `/rpc`, `/mcp`, the AI tool endpoints and the dev-only `audit.md` and `/__eeao`.
+  - `middleware.ts` serves `/rpc`, `/mcp`, the AI tool endpoints and the dev-only `audit.md` and `/__realtime`.
   - `devtools.ts` and `devtools.html` are the call visualizers (dev only).
   - `index.ts` exports `procedure` and `profile` typed with bwf's env, plus the `apiTokens()` provider.
 - The other Realtime packages are used unchanged.
 
-## Call visualizers (/__eeao)
+## Call visualizers (/__realtime)
 
-Under `vite dev`, the eeao middleware serves a devtools page at `/__eeao`, and Vite prints its URL next to its own. There's nothing to configure. `vite build` drops it: the bundle has no trace of the page or the recorder (checked by grepping the built Worker).
+Under `vite dev`, the realtime middleware serves a devtools page at `/__realtime`, and Vite prints its URL next to its own. There's nothing to configure. `vite build` drops it: the bundle has no trace of the page or the recorder (checked by grepping the built Worker).
 
 It has three views. Each call shows its journey through the decisions: the surface it came in on, authentication, input, authorization, the handler, output, errors and the analytics event. Steps that failed are red, opt-outs show their reason, and steps after a failure show as not reached.
 
-- **Network.** Every request eeao answered (HTTP, CLI, MCP, AI tools) and every outbound fetch the Worker made, including model API calls. Filter by surface or name. Shows headers (tokens masked) and both bodies.
+- **Network.** Every request realtime answered (HTTP, CLI, MCP, AI tools) and every outbound fetch the Worker made, including model API calls. Filter by surface or name. Shows headers (tokens masked) and both bodies.
 - **MCP.** One row per JSON-RPC message: `initialize`, `tools/list` (tools with their read, write or destructive effect) and each `tools/call` with its arguments, what the client got back, and the journey.
 - **AI chat.** Conversations rebuilt from the Anthropic Messages calls the Worker makes: the person's messages, the model's replies, and each tool call inline with its approval state (runs without approval, waiting, approved), its result and its journey. Agents outside the app that call `/rpc/ai/run` show as tool calls grouped by token.
 
@@ -164,6 +164,6 @@ How it works: the registry has a `trace` channel that records each step of a cal
 
 - **Better Auth.** Tokens are SHA-256 hashes in a D1 table read by `apiTokens()`. Sessions and Better Auth API keys come next (PLAN.md, build step 2).
 - **Names from file paths.** Procedures still name themselves (`procedure('contacts.get')`). That needs the small core change in the plan.
-- **`npx eeao init`.** The middleware file and config line are written by hand here.
+- **`npx realtime init`.** The middleware file and config line are written by hand here.
 - **Real deploy.** Not run with `bwf deploy` to Cloudflare, which needs your account. The load gate was checked by starting the built Worker in Miniflare, which uses the same runtime as Cloudflare.
 - **Dev analytics logging.** In dev, analytics events are also printed to the console. That's how the demo collects them; production writes only to Analytics Engine.

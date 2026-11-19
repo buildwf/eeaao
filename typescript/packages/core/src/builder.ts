@@ -10,7 +10,7 @@ import type { CheckReason } from './reason.js';
 export const CONCERNS = ['authn', 'authz', 'input', 'output', 'errors', 'analytics', 'mcp', 'cli', 'aiTool'] as const;
 export type Concern = (typeof CONCERNS)[number];
 
-/** Where a call came from. CLI calls arrive over HTTP with an `x-eeao-surface: cli` header. */
+/** Where a call came from. CLI calls arrive over HTTP with an `x-realtime-surface: cli` header. */
 export type Surface = 'http' | 'mcp' | 'cli' | 'ai' | 'direct';
 
 /** Resolves who is calling. Return null for "not signed in", which becomes a 401. */
@@ -205,15 +205,15 @@ export type Builder<S extends State> = Open<S, 'procedure'> & {
 };
 
 export type Profile<S extends State> = Open<S, 'profile'> & {
-  readonly '~eeao': 'profile';
+  readonly '~realtime': 'profile';
   readonly '~state': S;
   readonly name: string;
   readonly decisions: Partial<Decisions>;
 };
-type AnyProfile = { readonly '~eeao': 'profile'; readonly '~state': State; readonly name: string };
+type AnyProfile = { readonly '~realtime': 'profile'; readonly '~state': State; readonly name: string };
 
 export interface Procedure<S extends State = State> {
-  readonly '~eeao': 'procedure';
+  readonly '~realtime': 'procedure';
   readonly name: S['name'];
   readonly decisions: Decisions;
   readonly profiles: readonly string[];
@@ -263,8 +263,8 @@ function make(kind: Kind, name: string, decisions: Partial<Decisions>, profiles:
     noCli: optOut('cli'),
     aiTool: (spec: AiToolSpec) => decide('aiTool', { kind: 'tool', ...spec }),
     noAiTool: optOut('aiTool'),
-    use: (profile: { '~eeao': string; name: string; decisions: Partial<Decisions> }) => {
-      if (profile?.['~eeao'] !== 'profile') throw new Error(`${label}: use() takes a profile made with profile(name)`);
+    use: (profile: { '~realtime': string; name: string; decisions: Partial<Decisions> }) => {
+      if (profile?.['~realtime'] !== 'profile') throw new Error(`${label}: use() takes a profile made with profile(name)`);
       const merged: Partial<Decisions> = { ...decisions };
       for (const c of CONCERNS) {
         const d = profile.decisions[c];
@@ -277,17 +277,17 @@ function make(kind: Kind, name: string, decisions: Partial<Decisions>, profiles:
   };
 
   if (kind === 'profile') {
-    return { ...methods, '~eeao': 'profile', '~state': undefined, name, decisions };
+    return { ...methods, '~realtime': 'profile', '~state': undefined, name, decisions };
   }
   return {
     ...methods,
-    '~eeao': 'builder',
+    '~realtime': 'builder',
     name,
     handler: (fn: (args: HandlerArgs<any>) => unknown) => {
       if (typeof fn !== 'function') throw new Error(`${label}: handler() needs a function`);
       // Completeness is checked when the registry loads, so the error lists every
       // problem at once and also covers code that skipped the type checker.
-      return Object.freeze({ '~eeao': 'procedure', name, decisions: { ...decisions }, profiles, handler: fn });
+      return Object.freeze({ '~realtime': 'procedure', name, decisions: { ...decisions }, profiles, handler: fn });
     },
   };
 }

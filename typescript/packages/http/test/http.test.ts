@@ -34,7 +34,7 @@ describe('rpcHandler', () => {
 
   it('tags CLI calls for analytics', async () => {
     analytics.events.length = 0;
-    await post('/rpc/contacts.get', { orgId: 'o1', id: 'c1' }, { authorization: 'Bearer bob', 'x-eeao-surface': 'cli' });
+    await post('/rpc/contacts.get', { orgId: 'o1', id: 'c1' }, { authorization: 'Bearer bob', 'x-realtime-surface': 'cli' });
     await new Promise((r) => setTimeout(r, 0));
     expect(analytics.events.at(-1)?.surface).toBe('cli');
   });

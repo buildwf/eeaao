@@ -1,11 +1,11 @@
 import { defineConfig } from 'vite';
 import { bwfPlugin } from '@builtbyfriends/bwf';
-// Published, this is: import { eeao } from '@builtbyfriends/realtime-bwf/plugin';
-import { eeao } from '../../typescript/packages/bwf/src/plugin.ts';
+// Published, this is: import { realtime } from '@builtbyfriends/realtime-bwf/plugin';
+import { realtime } from '../../typescript/packages/bwf/src/plugin.ts';
 
 export default defineConfig({
-  plugins: [bwfPlugin(), eeao()],
-  // Only because the eeao packages aren't published yet: point at their source.
+  plugins: [bwfPlugin(), realtime()],
+  // Only because the realtime packages aren't published yet: point at their source.
   resolve: {
     alias: aliases(),
     dedupe: ['@builtbyfriends/bwf', 'zod', 'hono', 'agents', '@modelcontextprotocol/server', '@standard-schema/spec'],

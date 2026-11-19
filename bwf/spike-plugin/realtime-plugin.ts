@@ -2,15 +2,15 @@ import type { Plugin } from 'vite';
 import { globSync } from 'node:fs';
 import { join, relative } from 'node:path';
 
-const REGISTRY = 'virtual:eeao-registry';
+const REGISTRY = 'virtual:realtime-registry';
 const RESOLVED = '\0' + REGISTRY;
 
-/** Zero-config eeao for bwf: discovers procedures/, builds the registry, mounts /rpc and /mcp. */
-export function eeao(opts: { dir?: string; analytics?: string } = {}): Plugin {
+/** Zero-config realtime for bwf: discovers procedures/, builds the registry, mounts /rpc and /mcp. */
+export function realtime(opts: { dir?: string; analytics?: string } = {}): Plugin {
   const root = process.cwd();
   const dir = opts.dir ?? 'procedures';
   return {
-    name: 'eeao:bwf',
+    name: 'realtime:bwf',
     enforce: 'post',
     resolveId(id) { if (id === REGISTRY) return RESOLVED; },
     load(id) {
@@ -22,10 +22,10 @@ export function eeao(opts: { dir?: string; analytics?: string } = {}): Plugin {
         `import { analyticsEngine } from '@builtbyfriends/realtime-analytics';`,
         `import { rpcHandler } from '@builtbyfriends/realtime-http';`,
         ...imports,
-        `const found = [${files.map((_, i) => `...Object.values(m${i})`).join(', ')}].filter((v) => v && (v['~eeao'] === 'procedure' || v['~eeao'] === 'builder'));`,
+        `const found = [${files.map((_, i) => `...Object.values(m${i})`).join(', ')}].filter((v) => v && (v['~realtime'] === 'procedure' || v['~realtime'] === 'builder'));`,
         `export const registry = defineRegistry(found, { analytics: analyticsEngine({ binding: ${JSON.stringify(opts.analytics ?? 'ANALYTICS')} }) });`,
         `const rpc = rpcHandler(registry);`,
-        `export const eeaoMiddleware = async (c, next) => rpc.matches(c.req.raw) ? rpc(c.req.raw, c.env, c.executionCtx) : next();`,
+        `export const realtimeMiddleware = async (c, next) => rpc.matches(c.req.raw) ? rpc(c.req.raw, c.env, c.executionCtx) : next();`,
       ].join('\n');
     },
   };
