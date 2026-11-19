@@ -1,24 +1,32 @@
-# eeaao
+# Realtime
 
-A procedure builder for Cloudflare Workers. Each procedure has to decide nine things before it compiles: authentication, authorization, input, output, errors, analytics, MCP, CLI and AI tool exposure. Skipping one isn't possible by accident, and opting out takes a written reason.
+Realtime helps you build procedures for Cloudflare Workers. A procedure is one typed function that your app calls. For each procedure, you choose these nine things:
 
-That makes it a good fit for code written by AI agents, because every choice shows up in review.
+- authentication
+- authorization
+- input
+- output
+- errors
+- analytics
+- MCP
+- CLI
+- AI tools
 
-The TypeScript implementation lives in [`typescript/`](typescript/README.md). It has the builder, an HTTP handler, MCP, AI tools, analytics, a CLI, a Durable Object data layer and live queries.
+The procedure doesn't compile until you choose all nine. To leave one out, you write down why. This makes each choice easy to see in a review.
 
-## Works with the bwf CLI
+The packages are named `@eeao/*`. The code is in [`typescript/`](typescript/README.md). It has the builder, an HTTP handler, MCP, AI tools, analytics, a CLI, a Durable Object data layer and live queries.
 
-[bwf](https://github.com/buildwf/platform) is a framework and CLI for Cloudflare Workers built on Vite. `@eeao/bwf` is the one package here that knows about it. Nothing else imports bwf, and a test keeps it that way.
+## Use it with bwf
+
+[bwf](https://github.com/buildwf/platform) builds and deploys apps to Cloudflare Workers. `@eeao/bwf` connects Realtime to a bwf app. It's the only package here that knows about bwf, and a test checks that.
 
 `@eeao/bwf` gives a bwf app:
 
-- a Vite plugin that finds your procedures in `src/procedures/`, builds the registry and fails the build when a plain bwf route skips the nine decisions
+- a Vite plugin that finds the procedures in `src/procedures/` and stops the build when a bwf route doesn't make the nine choices
 - one middleware file that serves `/rpc`, `/mcp` and the AI tool endpoints
-- live queries over bwf's live streams, and the hookup for `@eeao/data`
+- live queries over bwf's live streams, and the link to `@eeao/data`
 
-The demo in [`bwf/demo`](bwf/demo/README.md) is a complete bwf app, and `npm run demo` there runs every surface against a real dev server. It needs Node 24.22 or newer, and the `@buildwf/bwf` package.
-
-The adapter doesn't import the host package, and it accepts the generated bindings type.
+[`bwf/demo`](bwf/demo/README.md) is a full bwf app. Run `npm run demo` there to try each part against a real dev server. It needs Node.js 24.22 or newer.
 
 ## Try it
 
@@ -28,12 +36,12 @@ npm install
 npm run check
 ```
 
-## Layout
+## Folders
 
 | Folder | What's in it |
 | --- | --- |
-| `typescript/` | The packages (`@eeao/*`), examples and tests |
-| `bwf/` | A demo bwf app and spikes for the adapter |
+| `typescript/` | The `@eeao/*` packages, examples and tests |
+| `bwf/` | A demo bwf app and test code for the adapter |
 
 ## License
 
