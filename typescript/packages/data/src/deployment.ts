@@ -59,6 +59,8 @@ export type DataDefinition<S extends Schema, F extends Record<string, AnyFn>, J 
   onCommit?: (topics: string[], env: any) => void | Promise<void>;
   /** Attempts per job before it is parked as failed. Default 5. */
   maxJobAttempts?: number;
+  /** How long a plain job may hold the one-at-a-time lane before the next one starts beside it. Default 120000 (two minutes). */
+  laneMs?: number;
 };
 
 type Stub = { run(kind: string, name: string, args: unknown): Promise<any>; job(id: string): Promise<ScheduledJob | null> };
@@ -139,6 +141,7 @@ type Resolved = {
   jobs: Record<string, JobFn<any>>;
   onCommit?: (topics: string[], env: any) => void | Promise<void>;
   maxJobAttempts?: number;
+  laneMs?: number;
 };
 
 /** Runs data functions and jobs against one storage. The Durable Object mixin wraps this. */
@@ -181,17 +184,26 @@ export class Engine {
     const max = this.def.maxJobAttempts ?? 5;
     const running = new Set<string>();
     const active: Promise<void>[] = [];
-    let serial = false;
+    // The job holding the one-at-a-time lane. A job that hangs gives the lane up after `laneMs`, so it can't hold up the rest.
+    let laneOwner: string | null = null;
+    const laneMs = this.def.laneMs ?? 120_000;
     for (;;) {
       for (const job of scheduler.due(Date.now(), 50)) {
         if (running.has(job.id)) continue;
         const concurrent = !!(this.def.jobs[job.name] as { concurrent?: boolean } | undefined)?.concurrent;
-        if (!concurrent && serial) continue;
-        if (!concurrent) serial = true;
+        if (!concurrent && laneOwner !== null) continue;
+        let release: ReturnType<typeof setTimeout> | undefined;
+        if (!concurrent) {
+          laneOwner = job.id;
+          release = setTimeout(() => {
+            if (laneOwner === job.id) laneOwner = null;
+          }, laneMs);
+        }
         running.add(job.id);
         const done = this.runJob(scheduler, job, max).finally(() => {
           running.delete(job.id);
-          if (!concurrent) serial = false;
+          clearTimeout(release);
+          if (laneOwner === job.id) laneOwner = null;
           active.splice(active.indexOf(done), 1);
         });
         active.push(done);
