@@ -8,7 +8,7 @@ The TypeScript implementation lives in [`typescript/`](typescript/README.md). It
 
 ## Works with the bwf CLI
 
-[bwf](https://github.com/buildwf/fif-spa) is a framework and CLI for Cloudflare Workers built on Vite. `@eeao/bwf` is the one package here that knows about it. Nothing else imports bwf, and a test keeps it that way.
+[bwf](https://github.com/buildwf/platform) is a framework and CLI for Cloudflare Workers built on Vite. `@eeao/bwf` is the one package here that knows about it. Nothing else imports bwf, and a test keeps it that way.
 
 `@eeao/bwf` gives a bwf app:
 
