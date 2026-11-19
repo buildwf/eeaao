@@ -32,10 +32,10 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/buildwf/realtime.git",
+    "url": "git+https://github.com/builtbyfriends/realtime.git",
     "directory": "typescript/packages/live"
   },
-  "homepage": "https://github.com/buildwf/realtime#readme",
+  "homepage": "https://github.com/builtbyfriends/realtime#readme",
   "publishConfig": {
     "access": "public"
   },
