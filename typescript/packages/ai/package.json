@@ -1,5 +1,5 @@
 {
-  "name": "@buildwf/realtime-ai",
+  "name": "@builtbyfriends/realtime-ai",
   "version": "0.1.0",
   "description": "AI tool definitions (Anthropic API, AI SDK) for an eeao registry",
   "type": "module",
@@ -16,7 +16,7 @@
   ],
   "license": "MIT",
   "dependencies": {
-    "@buildwf/realtime": "0.1.0"
+    "@builtbyfriends/realtime": "0.1.0"
   },
   "repository": {
     "type": "git",

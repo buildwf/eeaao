@@ -1,5 +1,5 @@
-import { rpcHandler } from '@buildwf/realtime-http';
-import { mcpHandler } from '@buildwf/realtime-mcp';
+import { rpcHandler } from '@builtbyfriends/realtime-http';
+import { mcpHandler } from '@builtbyfriends/realtime-mcp';
 import type { Env } from './procedures.js';
 import { registry } from './registry.js';
 

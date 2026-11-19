@@ -1,6 +1,6 @@
-import type { LiveTransport } from '@buildwf/realtime-live';
+import type { LiveTransport } from '@builtbyfriends/realtime-live';
 
-/** The part of bwf's `@buildwf/bwf/live/client` this adapter uses. Pass `connectLiveStream` itself. */
+/** The part of bwf's `@builtbyfriends/bwf/live/client` this adapter uses. Pass `connectLiveStream` itself. */
 export type ConnectLiveStream = (
   url: string | URL,
   options?: {
@@ -16,7 +16,7 @@ export type ConnectLiveStream = (
 };
 
 export type BwfTransportOptions = {
-  /** `connectLiveStream` from `@buildwf/bwf/live/client`. */
+  /** `connectLiveStream` from `@builtbyfriends/bwf/live/client`. */
   connect: ConnectLiveStream;
   /** The route that exports `live.connect` and `live.control`. Default "/live". */
   url?: string;

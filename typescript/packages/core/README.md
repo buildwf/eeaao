@@ -1,11 +1,11 @@
-# @buildwf/realtime
+# @builtbyfriends/realtime
 
 Must-choose procedure builder and registry.
 
 It's part of [Realtime](https://github.com/buildwf/realtime), a procedure builder for Cloudflare Workers.
 
 ```sh
-npm install @buildwf/realtime
+npm install @builtbyfriends/realtime
 ```
 
 MIT license.

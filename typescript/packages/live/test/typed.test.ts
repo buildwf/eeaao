@@ -1,8 +1,8 @@
 import { describe, expectTypeOf, it } from 'vitest';
 import type { Live, Procs, Typed } from '../src/index.js';
-import type { AnyProcedure } from '@buildwf/realtime';
+import type { AnyProcedure } from '@builtbyfriends/realtime';
 
-// A generated procedure map (what `@buildwf/bwf` emits) is a plain `{ '~procedures': Map }`, not a Registry.
+// A generated procedure map (what `@builtbyfriends/bwf` emits) is a plain `{ '~procedures': Map }`, not a Registry.
 type Map = { 'count.get': AnyProcedure };
 type Typed1 = { readonly '~procedures'?: Map };
 

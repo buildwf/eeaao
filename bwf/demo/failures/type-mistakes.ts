@@ -1,6 +1,6 @@
 // Each export below is a mistake an agent might make. `tsc` rejects every one.
 import { z } from 'zod';
-import { procedure } from '@buildwf/realtime-bwf';
+import { procedure } from '@builtbyfriends/realtime-bwf';
 import { signedIn } from './_shared';
 
 // 1. Forgot several decisions. The handler won't accept a function and says what's missing.

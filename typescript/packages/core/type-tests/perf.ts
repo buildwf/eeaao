@@ -1,6 +1,6 @@
 // Generated: 200 complete procedures, to keep editor and tsc time in check (about 0.5s with TS 7).
 import { z } from 'zod';
-import { bearerAuth, createProcedures, defineRegistry } from '@buildwf/realtime';
+import { bearerAuth, createProcedures, defineRegistry } from '@builtbyfriends/realtime';
 const { procedure } = createProcedures<{ DB: string }>();
 const t = bearerAuth({ verify: () => ({ id: 'u', orgId: 'o' }) });
 export const p0 = procedure('p.n0').auth(t).input(z.object({ orgId: z.string(), id: z.string() })).authz({ policy: 'org', check: (c, i) => c.orgId === i.orgId }).output(z.object({ id: z.string() })).errors({ NOT_FOUND: { status: 404, message: 'x' } }).analytics({ event: 'e0', props: (i) => ({ o: i.orgId }) }).mcp({ description: 'd', effect: 'read' }).cli({ command: 'p n0', description: 'd' }).noAiTool({ reason: 'Not useful to agents here' }).handler(({ input, fail }) => input.id === 'x' ? fail('NOT_FOUND') : { id: input.id });

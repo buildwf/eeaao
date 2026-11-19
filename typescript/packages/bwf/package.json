@@ -1,5 +1,5 @@
 {
-  "name": "@buildwf/realtime-bwf",
+  "name": "@builtbyfriends/realtime-bwf",
   "version": "0.1.0",
   "description": "Zero-setup eeao for bwf: a Vite plugin, one middleware file, live queries and the data layer hookup",
   "type": "module",
@@ -30,21 +30,21 @@
     }
   },
   "peerDependencies": {
-    "@buildwf/bwf": "^1.9.1",
+    "@builtbyfriends/bwf": "^1.9.1",
     "vite": "^8.0.0",
     "react": ">=18"
   },
   "license": "MIT",
   "dependencies": {
-    "@buildwf/realtime-ai": "0.1.0",
-    "@buildwf/realtime-analytics": "0.1.0",
-    "@buildwf/realtime": "0.1.0",
-    "@buildwf/realtime-http": "0.1.0",
-    "@buildwf/realtime-live": "0.1.0",
-    "@buildwf/realtime-mcp": "0.1.0"
+    "@builtbyfriends/realtime-ai": "0.1.0",
+    "@builtbyfriends/realtime-analytics": "0.1.0",
+    "@builtbyfriends/realtime": "0.1.0",
+    "@builtbyfriends/realtime-http": "0.1.0",
+    "@builtbyfriends/realtime-live": "0.1.0",
+    "@builtbyfriends/realtime-mcp": "0.1.0"
   },
   "peerDependenciesMeta": {
-    "@buildwf/bwf": {
+    "@builtbyfriends/bwf": {
       "optional": true
     },
     "react": {

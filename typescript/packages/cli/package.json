@@ -1,5 +1,5 @@
 {
-  "name": "@buildwf/realtime-cli",
+  "name": "@builtbyfriends/realtime-cli",
   "version": "0.1.0",
   "description": "Command line client for an eeao Worker, driven by its manifest",
   "type": "module",
@@ -21,7 +21,7 @@
   },
   "license": "MIT",
   "dependencies": {
-    "@buildwf/realtime": "0.1.0"
+    "@builtbyfriends/realtime": "0.1.0"
   },
   "repository": {
     "type": "git",

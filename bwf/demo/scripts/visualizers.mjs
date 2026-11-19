@@ -16,7 +16,7 @@ const base = `http://localhost:${port}`;
 const model = await startFakeModel();
 const env = { ...process.env, ANTHROPIC_BASE_URL: process.env.ANTHROPIC_API_KEY ? 'https://api.anthropic.com' : model.url };
 
-execFileSync('npx', ['@buildwf/bwf', 'db', 'seed'], { cwd: root, stdio: 'ignore' });
+execFileSync('npx', ['@builtbyfriends/bwf', 'db', 'seed'], { cwd: root, stdio: 'ignore' });
 const dev = spawn('npx', ['vite', 'dev', '--port', String(port), '--strictPort'], { cwd: root, env, stdio: ['ignore', 'pipe', 'pipe'] });
 let log = '';
 dev.stdout.on('data', (d) => (log += d));

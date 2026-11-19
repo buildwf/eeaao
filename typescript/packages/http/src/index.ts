@@ -1,5 +1,5 @@
-import type { CallResult, Registry, Surface } from '@buildwf/realtime';
-import { BUILTIN_ERRORS } from '@buildwf/realtime';
+import type { CallResult, Registry, Surface } from '@builtbyfriends/realtime';
+import { BUILTIN_ERRORS } from '@builtbyfriends/realtime';
 
 export type RpcHandlerOptions = {
   /** Path prefix for procedures, the manifest and OpenAPI. Default "/rpc". */

@@ -1,4 +1,4 @@
-import { sqliteTable, text, integer } from '@buildwf/bwf/schema-d1';
+import { sqliteTable, text, integer } from '@builtbyfriends/bwf/schema-d1';
 
 export const contacts = sqliteTable('contacts', {
   id: text('id').primaryKey(),

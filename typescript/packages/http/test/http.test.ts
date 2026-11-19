@@ -1,8 +1,8 @@
 import { describe, expect, expectTypeOf, it } from 'vitest';
-import { defineRegistry } from '@buildwf/realtime';
-import { memoryAnalytics } from '@buildwf/realtime-analytics';
-import { rpcHandler } from '@buildwf/realtime-http';
-import { createClient, RpcError } from '@buildwf/realtime-http/client';
+import { defineRegistry } from '@builtbyfriends/realtime';
+import { memoryAnalytics } from '@builtbyfriends/realtime-analytics';
+import { rpcHandler } from '@builtbyfriends/realtime-http';
+import { createClient, RpcError } from '@builtbyfriends/realtime-http/client';
 import { env, getContact, ping, purge } from '../../core/test/fixtures.js';
 
 const analytics = memoryAnalytics();

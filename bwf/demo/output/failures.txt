@@ -56,4 +56,4 @@ $ npx vite build   (exit 0)
 
 $ rm middleware/00.eeao.ts && npx vite build   (exit 1)
 eeao found 1 problem(s):
-  - middleware/ has no eeao middleware. Run `npx eeao init`, or create middleware/00.eeao.ts containing: export { default } from '@buildwf/realtime-bwf/middleware';
+  - middleware/ has no eeao middleware. Run `npx eeao init`, or create middleware/00.eeao.ts containing: export { default } from '@builtbyfriends/realtime-bwf/middleware';
