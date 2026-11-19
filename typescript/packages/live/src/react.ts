@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState, useSyncExternalStore } from 'react';
-import type { InputOf, OutputOf } from '@eeao/core';
+import type { InputOf, OutputOf } from '@buildwf/realtime';
 import type { Live, Procs, QueryOptions, QueryState, Typed } from './index.js';
 
 export type UseQueryResult<T> = QueryState<T> & {

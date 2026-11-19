@@ -6,9 +6,9 @@ const pkg = (name: string, file = 'index') => fileURLToPath(new URL(`./packages/
 export default defineConfig({
   resolve: {
     alias: [
-      { find: '@eeao/live/react', replacement: pkg('live', 'react') },
-      { find: '@eeao/http/client', replacement: pkg('http', 'client') },
-      ...['core', 'http', 'mcp', 'ai', 'analytics', 'cli', 'data', 'live'].map((n) => ({ find: `@eeao/${n}`, replacement: pkg(n) })),
+      { find: '@buildwf/realtime-live/react', replacement: pkg('live', 'react') },
+      { find: '@buildwf/realtime-http/client', replacement: pkg('http', 'client') },
+      ...['core', 'http', 'mcp', 'ai', 'analytics', 'cli', 'data', 'live'].map((n) => ({ find: n === 'core' ? '@buildwf/realtime' : `@buildwf/realtime-${n}`, replacement: pkg(n) })),
     ],
   },
   test: { include: ['packages/*/test/**/*.test.{ts,tsx}', 'examples/*/test/**/*.test.ts'] },

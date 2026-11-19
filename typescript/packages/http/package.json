@@ -1,14 +1,37 @@
 {
-  "name": "@eeao/http",
+  "name": "@buildwf/realtime-http",
   "version": "0.1.0",
   "description": "Fetch handler, OpenAPI and typed client for an eeao registry",
   "type": "module",
   "sideEffects": false,
   "exports": {
-    ".": { "types": "./dist/index.d.ts", "default": "./dist/index.js" },
-    "./client": { "types": "./dist/client.d.ts", "default": "./dist/client.js" }
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./client": {
+      "types": "./dist/client.d.ts",
+      "default": "./dist/client.js"
+    }
   },
-  "files": ["dist", "src"],
+  "files": [
+    "dist",
+    "src"
+  ],
   "license": "MIT",
-  "dependencies": { "@eeao/core": "0.1.0" }
+  "dependencies": {
+    "@buildwf/realtime": "0.1.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/buildwf/realtime.git",
+    "directory": "typescript/packages/http"
+  },
+  "homepage": "https://github.com/buildwf/realtime#readme",
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "prepack": "cp ../../../LICENSE LICENSE"
+  }
 }

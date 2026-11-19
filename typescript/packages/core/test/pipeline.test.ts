@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
-import { defineRegistry } from '@eeao/core';
-import { memoryAnalytics } from '@eeao/analytics';
+import { defineRegistry } from '@buildwf/realtime';
+import { memoryAnalytics } from '@buildwf/realtime-analytics';
 import { env, getContact, ping, purge, req } from './fixtures.js';
 
 function setup() {

@@ -1,15 +1,33 @@
 {
-  "name": "@eeao/bwf",
+  "name": "@buildwf/realtime-bwf",
   "version": "0.1.0",
   "description": "Zero-setup eeao for bwf: a Vite plugin, one middleware file, live queries and the data layer hookup",
   "type": "module",
   "exports": {
-    ".": "./src/index.ts",
-    "./plugin": "./src/plugin.ts",
-    "./middleware": "./src/middleware.ts",
-    "./live": "./src/live.ts",
-    "./react": "./src/react.ts",
-    "./data": "./src/data.ts"
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./plugin": {
+      "types": "./dist/plugin.d.ts",
+      "default": "./dist/plugin.js"
+    },
+    "./middleware": {
+      "types": "./dist/middleware.d.ts",
+      "default": "./dist/middleware.js"
+    },
+    "./live": {
+      "types": "./dist/live.d.ts",
+      "default": "./dist/live.js"
+    },
+    "./react": {
+      "types": "./dist/react.d.ts",
+      "default": "./dist/react.js"
+    },
+    "./data": {
+      "types": "./dist/data.d.ts",
+      "default": "./dist/data.js"
+    }
   },
   "peerDependencies": {
     "@buildwf/bwf": "^1.9.1",
@@ -18,7 +36,12 @@
   },
   "license": "MIT",
   "dependencies": {
-    "@eeao/live": "0.1.0"
+    "@buildwf/realtime-ai": "0.1.0",
+    "@buildwf/realtime-analytics": "0.1.0",
+    "@buildwf/realtime": "0.1.0",
+    "@buildwf/realtime-http": "0.1.0",
+    "@buildwf/realtime-live": "0.1.0",
+    "@buildwf/realtime-mcp": "0.1.0"
   },
   "peerDependenciesMeta": {
     "@buildwf/bwf": {
@@ -27,5 +50,21 @@
     "react": {
       "optional": true
     }
+  },
+  "files": [
+    "dist",
+    "src"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/buildwf/realtime.git",
+    "directory": "typescript/packages/bwf"
+  },
+  "homepage": "https://github.com/buildwf/realtime#readme",
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "prepack": "cp ../../../LICENSE LICENSE"
   }
 }

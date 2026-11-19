@@ -1,12 +1,37 @@
 {
-  "name": "@eeao/mcp",
+  "name": "@buildwf/realtime-mcp",
   "version": "0.1.0",
   "description": "Stateless MCP server for an eeao registry on Cloudflare Workers",
   "type": "module",
   "sideEffects": false,
-  "exports": { ".": { "types": "./dist/index.d.ts", "default": "./dist/index.js" } },
-  "files": ["dist", "src"],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "src"
+  ],
   "license": "MIT",
-  "dependencies": { "@eeao/core": "0.1.0" },
-  "peerDependencies": { "agents": ">=0.33.0", "@modelcontextprotocol/server": "^2.4.0" }
+  "dependencies": {
+    "@buildwf/realtime": "0.1.0"
+  },
+  "peerDependencies": {
+    "agents": ">=0.33.0",
+    "@modelcontextprotocol/server": "^2.4.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/buildwf/realtime.git",
+    "directory": "typescript/packages/mcp"
+  },
+  "homepage": "https://github.com/buildwf/realtime#readme",
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "prepack": "cp ../../../LICENSE LICENSE"
+  }
 }

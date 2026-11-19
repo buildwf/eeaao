@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { z } from 'zod';
-import { defineRegistry } from '@eeao/core';
-import { memoryAnalytics } from '@eeao/analytics';
-import { rpcHandler } from '@eeao/http';
-import { run } from '@eeao/cli';
+import { defineRegistry } from '@buildwf/realtime';
+import { memoryAnalytics } from '@buildwf/realtime-analytics';
+import { rpcHandler } from '@buildwf/realtime-http';
+import { run } from '@buildwf/realtime-cli';
 import { env, getContact, ping, procedure, purge, token } from '../../core/test/fixtures.js';
 
 const search = procedure('contacts.search')

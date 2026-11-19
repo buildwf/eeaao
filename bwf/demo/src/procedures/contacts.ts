@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { procedure } from '@eeao/bwf';
+import { procedure } from '@buildwf/realtime-bwf';
 import { and, db, eq, like } from '@buildwf/bwf/db';
 import { contacts } from '@schema';
 import { adminOnly, Contact, signedIn } from './_shared';

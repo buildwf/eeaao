@@ -1,4 +1,4 @@
-import type { AnalyticsEvent, AnalyticsProvider } from '@eeao/core';
+import type { AnalyticsEvent, AnalyticsProvider } from '@buildwf/realtime';
 
 type AnalyticsEngineDataset = {
   writeDataPoint(point: { indexes?: string[]; blobs?: (string | null)[]; doubles?: number[] }): void;

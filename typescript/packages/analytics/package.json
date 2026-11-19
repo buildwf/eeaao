@@ -1,11 +1,33 @@
 {
-  "name": "@eeao/analytics",
+  "name": "@buildwf/realtime-analytics",
   "version": "0.1.0",
   "description": "Analytics providers for eeao: Workers Analytics Engine, PostHog",
   "type": "module",
   "sideEffects": false,
-  "exports": { ".": { "types": "./dist/index.d.ts", "default": "./dist/index.js" } },
-  "files": ["dist", "src"],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "src"
+  ],
   "license": "MIT",
-  "dependencies": { "@eeao/core": "0.1.0" }
+  "dependencies": {
+    "@buildwf/realtime": "0.1.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/buildwf/realtime.git",
+    "directory": "typescript/packages/analytics"
+  },
+  "homepage": "https://github.com/buildwf/realtime#readme",
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "prepack": "cp ../../../LICENSE LICENSE"
+  }
 }

@@ -2,7 +2,7 @@
 // the compiler's messages to messages.expected.txt, because these messages are what an
 // AI agent reads to fix its own code. Run `npm run test:types -- --update` to accept changes.
 import { z } from 'zod';
-import { bearerAuth, defineRegistry, procedure } from '@eeao/core';
+import { bearerAuth, defineRegistry, procedure } from '@buildwf/realtime';
 
 const token = bearerAuth({ verify: () => ({ id: 'u1' }) });
 

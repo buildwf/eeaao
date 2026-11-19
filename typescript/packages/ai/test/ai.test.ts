@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { defineRegistry } from '@eeao/core';
-import { memoryAnalytics } from '@eeao/analytics';
-import { aiSdkTools, anthropicTools, runTool, toolResultContent } from '@eeao/ai';
+import { defineRegistry } from '@buildwf/realtime';
+import { memoryAnalytics } from '@buildwf/realtime-analytics';
+import { aiSdkTools, anthropicTools, runTool, toolResultContent } from '@buildwf/realtime-ai';
 import { env, getContact, ping, purge, req } from '../../core/test/fixtures.js';
 
 const analytics = memoryAnalytics();

@@ -1,4 +1,4 @@
-import type { Manifest, ManifestEntry } from '@eeao/core';
+import type { Manifest, ManifestEntry } from '@buildwf/realtime';
 
 type Io = {
   argv: string[];

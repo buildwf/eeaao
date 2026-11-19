@@ -1,6 +1,6 @@
 import { z } from 'zod';
-import { appRegistry, procedure } from '@eeao/bwf';
-import { anthropicTools, runTool, toolResultContent } from '@eeao/ai';
+import { appRegistry, procedure } from '@buildwf/realtime-bwf';
+import { anthropicTools, runTool, toolResultContent } from '@buildwf/realtime-ai';
 import { env as config } from '@buildwf/bwf/env';
 import { signedIn } from './_shared';
 

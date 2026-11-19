@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { Client, StreamableHTTPClientTransport } from '@modelcontextprotocol/client';
-import { defineRegistry } from '@eeao/core';
-import { memoryAnalytics } from '@eeao/analytics';
-import { mcpHandler } from '@eeao/mcp';
+import { defineRegistry } from '@buildwf/realtime';
+import { memoryAnalytics } from '@buildwf/realtime-analytics';
+import { mcpHandler } from '@buildwf/realtime-mcp';
 import { env, getContact, ping, purge } from '../../core/test/fixtures.js';
 
 const analytics = memoryAnalytics();

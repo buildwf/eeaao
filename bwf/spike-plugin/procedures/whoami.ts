@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { bearerAuth, createProcedures } from '@eeao/core';
+import { bearerAuth, createProcedures } from '@buildwf/realtime';
 type User = { id: string; orgId: string };
 type Env = { API_TOKENS: string };
 const { procedure } = createProcedures<Env>();

@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { defineData, defineSchema, table } from '@eeao/data';
-import { createLive } from '@eeao/live';
+import { defineData, defineSchema, table } from '@buildwf/realtime-data';
+import { createLive } from '@buildwf/realtime-live';
 import { publishTopics, topicPolicy } from '../src/data.js';
 import { bwfTransport, type ConnectLiveStream } from '../src/live.js';
 import { memoryStorage } from '../../data/test/storage.js';

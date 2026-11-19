@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
-import { analyticsEngine, fanOut, posthog } from '@eeao/analytics';
-import type { AnalyticsEvent } from '@eeao/core';
+import { analyticsEngine, fanOut, posthog } from '@buildwf/realtime-analytics';
+import type { AnalyticsEvent } from '@buildwf/realtime';
 
 const event: AnalyticsEvent = {
   event: 'contact.viewed', procedure: 'contacts.get', surface: 'mcp', outcome: 'error', code: 'NOT_FOUND',

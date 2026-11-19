@@ -1,4 +1,4 @@
-import type { ErrorsOf, InputOf, OutputOf, Registry } from '@eeao/core';
+import type { ErrorsOf, InputOf, OutputOf, Registry } from '@buildwf/realtime';
 
 type Procs<R> = R extends Registry<any> ? NonNullable<R['~procedures']> : never;
 

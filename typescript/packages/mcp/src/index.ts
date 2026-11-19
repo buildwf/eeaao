@@ -1,6 +1,6 @@
 import { McpServer, type CallToolResult } from '@modelcontextprotocol/server';
 import { createMcpHandler, type CreateMcpHandlerOptions } from 'agents/mcp/server';
-import type { CallResult, JsonSchema, LoadedProcedure, Registry } from '@eeao/core';
+import type { CallResult, JsonSchema, LoadedProcedure, Registry } from '@buildwf/realtime';
 
 type ExecutionContextLike = { waitUntil(promise: Promise<unknown>): void };
 

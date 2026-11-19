@@ -42,8 +42,8 @@ export function eeao(options: EeaoPluginOptions = {}): Plugin {
   const problems = (): string[] => {
     const out: string[] = [];
     const mwDir = join(root, 'middleware');
-    const stub = existsSync(mwDir) && readdirSync(mwDir).some((f) => readFileSync(join(mwDir, f), 'utf8').includes('@eeao/bwf/middleware'));
-    if (!stub) out.push('middleware/ has no eeao middleware. Run `npx eeao init`, or create middleware/00.eeao.ts containing: export { default } from \'@eeao/bwf/middleware\';');
+    const stub = existsSync(mwDir) && readdirSync(mwDir).some((f) => readFileSync(join(mwDir, f), 'utf8').includes('@buildwf/realtime-bwf/middleware'));
+    if (!stub) out.push('middleware/ has no eeao middleware. Run `npx eeao init`, or create middleware/00.eeao.ts containing: export { default } from \'@buildwf/realtime-bwf/middleware\';');
     const routesDir = join(root, 'routes');
     if (existsSync(routesDir)) {
       for (const f of globSync('**/*.{ts,tsx,js,jsx,mts,mjs}', { cwd: routesDir })) {
@@ -77,8 +77,8 @@ export function eeao(options: EeaoPluginOptions = {}): Plugin {
       const files = procedureFiles();
       const logEvents = dev && options.logEventsInDev !== false;
       return [
-        `import { defineRegistry } from '@eeao/core';`,
-        `import { analyticsEngine, fanOut } from '@eeao/analytics';`,
+        `import { defineRegistry } from '@buildwf/realtime';`,
+        `import { analyticsEngine, fanOut } from '@buildwf/realtime-analytics';`,
         ...files.map((f, i) => `import * as m${i} from ${JSON.stringify('/' + f)};`),
         // Pick up unfinished builders too, so a procedure missing .handler() fails instead of vanishing.
         `const found = [${files.map((_, i) => `...Object.values(m${i})`).join(', ')}]`,

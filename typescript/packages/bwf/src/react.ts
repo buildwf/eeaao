@@ -1,5 +1,5 @@
-import { createLive, type LiveOptions, type Typed } from '@eeao/live';
-import { createLiveHooks } from '@eeao/live/react';
+import { createLive, type LiveOptions, type Typed } from '@buildwf/realtime-live';
+import { createLiveHooks } from '@buildwf/realtime-live/react';
 import { bwfTransport, type BwfTransportOptions } from './live.js';
 
 export type { ConnectLiveStream } from './live.js';

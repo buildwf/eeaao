@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { procedure } from '@eeao/bwf';
+import { procedure } from '@buildwf/realtime-bwf';
 import { db, sql } from '@buildwf/bwf/db';
 
 /** Opting out of everything that can be opted out of. Each opt-out still needs a reason. */
