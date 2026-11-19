@@ -61,6 +61,7 @@ function setup(options: { onCommit?: (topics: string[]) => void; seed?: boolean 
         },
         { concurrent: true },
       ),
+      hang: job(() => new Promise<void>(() => {})),
       quick: job(() => {
         calls.push('quick');
       }),
@@ -70,6 +71,7 @@ function setup(options: { onCommit?: (topics: string[]) => void; seed?: boolean 
     }),
     onCommit: options.onCommit ? (topics) => options.onCommit!(topics) : undefined,
     maxJobAttempts: 2,
+    laneMs: 50,
   });
   const storage = memoryStorage();
   const engine = data.engine(storage);
@@ -236,6 +238,18 @@ describe('scheduler', () => {
     expect(calls).toEqual(['slow:start', 'slow:start', 'quick', 'slow:end', 'slow:end']);
     expect(scheduler.get('s1')).toBeNull();
     expect(scheduler.get('q')).toBeNull();
+  });
+
+  it("lets a plain job that hangs give up the lane, so the next one runs", async () => {
+    const { engine, calls } = setup();
+    const scheduler = engine.scheduler();
+    scheduler.runAfter(0, 'hang', null, { id: 'h' });
+    scheduler.runAfter(0, 'quick', null, { id: 'q' });
+    const alarm = engine.alarm();
+    await new Promise((r) => setTimeout(r, 1500));
+    expect(calls).toEqual(['quick']);
+    expect(scheduler.get('q')).toBeNull();
+    void alarm;
   });
 
   it('runs a job left pending by a restart once the object starts', async () => {
