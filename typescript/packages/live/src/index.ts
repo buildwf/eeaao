@@ -1,4 +1,4 @@
-import type { InputOf, OutputOf, Registry } from '@eeao/core';
+import type { InputOf, OutputOf, Registry } from '@buildwf/realtime';
 
 /**
  * What the live client needs of a registry: its procedure map, which is a type and nothing at runtime. A `Registry` has
@@ -7,7 +7,7 @@ import type { InputOf, OutputOf, Registry } from '@eeao/core';
 export type Typed = { readonly '~procedures'?: unknown };
 
 /**
- * How a client hears about changes. bwf's `connectLiveStream` is one (see `@eeao/bwf/live`);
+ * How a client hears about changes. bwf's `connectLiveStream` is one (see `@buildwf/realtime-bwf/live`);
  * anything with topics and a reconnect signal works. Delivery may be at most once, so the
  * store never trusts an event's payload: an event only means "this query may be stale".
  */
@@ -28,7 +28,7 @@ export type Procs<R> = R extends { readonly '~procedures'?: infer P } ? NonNulla
 export type TopicMap<R> = { [N in keyof Procs<R> & string]?: (input: InputOf<Procs<R>[N]>) => string[] };
 
 export type LiveOptions<R> = {
-  /** Same shape as `createClient<R>(...)` from `@eeao/http/client`. */
+  /** Same shape as `createClient<R>(...)` from `@buildwf/realtime-http/client`. */
   client: { call: (name: any, input?: any) => Promise<any> };
   /** Without a transport, queries load once and refetch only when asked. */
   transport?: LiveTransport;

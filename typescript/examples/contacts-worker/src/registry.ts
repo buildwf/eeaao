@@ -1,5 +1,5 @@
-import { defineRegistry } from '@eeao/core';
-import { analyticsEngine } from '@eeao/analytics';
+import { defineRegistry } from '@buildwf/realtime';
+import { analyticsEngine } from '@buildwf/realtime-analytics';
 import { deleteContact, getContact, searchContacts, status } from './procedures.js';
 
 // Built at module scope on purpose: if a procedure is incomplete this throws while the

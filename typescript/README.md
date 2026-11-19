@@ -6,8 +6,8 @@ analytics, MCP, CLI and AI tool exposure. Skipping one is not possible by omissi
 Opting out is a decision too, and it needs a reason.
 
 The goal is to force whoever writes the code, especially an AI agent, to make each
-choice, and to make every choice visible in review. Package names (`@eeao/*`) are
-placeholders.
+choice, and to make every choice visible in review. The packages are
+`@buildwf/realtime` and `@buildwf/realtime-*` on npm.
 
 ```ts
 export const getContact = procedure('contacts.get')
@@ -34,15 +34,15 @@ Argument of type '() => Promise<{ ids: never[]; }>' is not assignable to paramet
 
 | Package | Runs on | What it does | Dependencies |
 | --- | --- | --- | --- |
-| `@eeao/core` | anywhere | Builder, profiles, registry, pipeline, audit, manifest | `@standard-schema/spec` (types) |
-| `@eeao/http` | Worker | `POST /rpc/{name}` fetch handler, `manifest.json`, `openapi.json`; `@eeao/http/client` is a typed fetch client | none |
-| `@eeao/mcp` | Worker | Stateless MCP over Streamable HTTP via Cloudflare's `createMcpHandler` (agents/mcp/server + MCP SDK v2) | peers: `agents`, `@modelcontextprotocol/server` |
-| `@eeao/ai` | Worker | Tool definitions for the Anthropic API and the AI SDK, with approval holds | none |
-| `@eeao/analytics` | Worker | Workers Analytics Engine (default), PostHog, fan-out, in-memory | none |
-| `@eeao/cli` | Node 20+ / Bun | `eeao` command driven by the Worker's manifest, bearer token auth | none |
-| `@eeao/data` | Durable Object | One object per deployment: transactional SQLite documents, indexes, FTS5, exact vector search, delayed and cancellable jobs on alarms | none |
-| `@eeao/live` | Browser | `useQuery`/`useMutation` over any transport: an RPC call plus topic subscriptions, refetched on events and reconnects | peer: `react` (optional) |
-| `@eeao/bwf` | Vite / bwf | The only package that knows bwf: plugin and middleware, `bwfTransport`, `createBwfLive`, `publishTopics`, `topicPolicy` | peers: `@buildwf/bwf`, `vite` |
+| `@buildwf/realtime` | anywhere | Builder, profiles, registry, pipeline, audit, manifest | `@standard-schema/spec` (types) |
+| `@buildwf/realtime-http` | Worker | `POST /rpc/{name}` fetch handler, `manifest.json`, `openapi.json`; `@buildwf/realtime-http/client` is a typed fetch client | none |
+| `@buildwf/realtime-mcp` | Worker | Stateless MCP over Streamable HTTP via Cloudflare's `createMcpHandler` (agents/mcp/server + MCP SDK v2) | peers: `agents`, `@modelcontextprotocol/server` |
+| `@buildwf/realtime-ai` | Worker | Tool definitions for the Anthropic API and the AI SDK, with approval holds | none |
+| `@buildwf/realtime-analytics` | Worker | Workers Analytics Engine (default), PostHog, fan-out, in-memory | none |
+| `@buildwf/realtime-cli` | Node 20+ / Bun | `eeao` command driven by the Worker's manifest, bearer token auth | none |
+| `@buildwf/realtime-data` | Durable Object | One object per deployment: transactional SQLite documents, indexes, FTS5, exact vector search, delayed and cancellable jobs on alarms | none |
+| `@buildwf/realtime-live` | Browser | `useQuery`/`useMutation` over any transport: an RPC call plus topic subscriptions, refetched on events and reconnects | peer: `react` (optional) |
+| `@buildwf/realtime-bwf` | Vite / bwf | The only package that knows bwf: plugin and middleware, `bwfTransport`, `createBwfLive`, `publishTopics`, `topicPolicy` | peers: `@buildwf/bwf`, `vite` |
 
 The Worker side uses Web APIs only, with no `nodejs_compat`.
 
@@ -178,7 +178,7 @@ mostly the MCP SDK and Zod.
 
 ## Data and live queries
 
-`@eeao/data` replaces the document store a Convex-style backend gives you. Functions run
+`@buildwf/realtime-data` replaces the document store a Convex-style backend gives you. Functions run
 inside one Durable Object, so a mutation is one SQLite transaction (`transactionSync`),
 and anything it schedules commits or rolls back with it. Procedures stay the only API: they
 call the typed client.
@@ -202,7 +202,7 @@ export const data = defineData({
       ctx.db.query('messages').withIndex('by_channel', (q) => q.eq('channel', a.channel)).order('desc').take(50)),
   }),
   jobs: (job) => ({ nudge: job(async (ctx, a: { id: string }) => { /* may be async; retried with backoff */ }) }),
-  onCommit: publishTopics(live),     // from @eeao/bwf/data; any (topics, env) => void works
+  onCommit: publishTopics(live),     // from @buildwf/realtime-bwf/data; any (topics, env) => void works
 });
 export class Deployment extends data.durableObject(DurableObject) {}   // bind it, new_sqlite_classes
 // in a procedure: data.client(env.DEPLOYMENT).mutate.send(input)
@@ -214,7 +214,7 @@ backoff and then parked as `failed`; give a job a stable `id` to replace a pendi
 `scheduler.cancel(id)` it. Search and vector indexes rebuild from the documents when their
 definition changes. Vector search is exact (cosine over the filtered rows).
 
-`@eeao/live` is the client half. bwf's live streams deliver at most once and replay
+`@buildwf/realtime-live` is the client half. bwf's live streams deliver at most once and replay
 nothing, so an event only means "this query may be stale": the store refetches, collapses
 bursts, shares one fetch between components asking the same thing, keeps the last good data
 on an error, and refetches everything when the transport reconnects or the tab is shown again.
@@ -222,7 +222,7 @@ on an error, and refetches everything when the transport reconnects or the tab i
 ```ts
 // src/live.ts
 import { connectLiveStream } from '@buildwf/bwf/live/client';
-import { createBwfLive } from '@eeao/bwf/react';
+import { createBwfLive } from '@buildwf/realtime-bwf/react';
 export const { useQuery, useMutation, live } = createBwfLive<typeof registry>({
   client: createClient<typeof registry>('/rpc'),
   connect: connectLiveStream,

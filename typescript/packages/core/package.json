@@ -1,5 +1,5 @@
 {
-  "name": "@eeao/core",
+  "name": "@buildwf/realtime",
   "version": "0.1.0",
   "description": "Must-choose procedure builder and registry",
   "type": "module",

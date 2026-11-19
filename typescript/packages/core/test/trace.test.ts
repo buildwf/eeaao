@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { defineRegistry, type CallTrace, type TraceEvent } from '@eeao/core';
-import { memoryAnalytics } from '@eeao/analytics';
+import { defineRegistry, type CallTrace, type TraceEvent } from '@buildwf/realtime';
+import { memoryAnalytics } from '@buildwf/realtime-analytics';
 import { env, getContact, ping, purge, req } from './fixtures.js';
 
 function setup() {

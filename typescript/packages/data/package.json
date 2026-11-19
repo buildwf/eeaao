@@ -1,5 +1,5 @@
 {
-  "name": "@eeao/data",
+  "name": "@buildwf/realtime-data",
   "version": "0.1.0",
   "description": "One Durable Object per deployment: transactional SQLite documents, indexes, FTS5, vectors and cancellable scheduled jobs",
   "type": "module",

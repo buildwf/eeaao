@@ -1,4 +1,4 @@
-import type { AnySchema } from '@eeao/core';
+import type { AnySchema } from '@buildwf/realtime';
 
 export type TableDef<D = any> = {
   /** Optional Standard Schema (zod, valibot, arktype) checked on every insert and replace. */

@@ -1,6 +1,6 @@
 import { z } from 'zod';
-import { createProcedures, defineRegistry } from '@eeao/core';
-import { rpcHandler } from '@eeao/http';
+import { createProcedures, defineRegistry } from '@buildwf/realtime';
+import { rpcHandler } from '@buildwf/realtime-http';
 import { data, Deployment } from './data.js';
 
 export { Deployment };

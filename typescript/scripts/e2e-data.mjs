@@ -1,4 +1,4 @@
-// End to end for @eeao/data in workerd (wrangler dev): the Durable Object's SQLite, FTS5,
+// End to end for @buildwf/realtime-data in workerd (wrangler dev): the Durable Object's SQLite, FTS5,
 // transactions, and alarm-driven scheduled jobs, behind eeao procedures.
 import { spawn } from 'node:child_process';
 import { join } from 'node:path';

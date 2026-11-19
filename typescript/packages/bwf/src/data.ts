@@ -1,4 +1,4 @@
-/** Server side: connects `@eeao/data` to a bwf `defineLiveStream()`. */
+/** Server side: connects `@buildwf/realtime-data` to a bwf `defineLiveStream()`. */
 
 type Publisher = { withEnv(env: any): { publish(topic: string, data: unknown, options?: { type?: string; eventId?: string }): Promise<void> } };
 

@@ -1,6 +1,6 @@
 import { defineConfig } from 'vite';
 import { bwfPlugin } from '@buildwf/bwf';
-// Published, this is: import { eeao } from '@eeao/bwf/plugin';
+// Published, this is: import { eeao } from '@buildwf/realtime-bwf/plugin';
 import { eeao } from '../../typescript/packages/bwf/src/plugin.ts';
 
 export default defineConfig({
@@ -15,10 +15,10 @@ export default defineConfig({
 function aliases() {
   const pkgs = new URL('../../typescript/packages/', import.meta.url).pathname;
   return [
-    { find: '@eeao/bwf/plugin', replacement: `${pkgs}bwf/src/plugin.ts` },
-    { find: '@eeao/bwf/middleware', replacement: `${pkgs}bwf/src/middleware.ts` },
-    { find: '@eeao/bwf', replacement: `${pkgs}bwf/src/index.ts` },
-    { find: '@eeao/http/client', replacement: `${pkgs}http/src/client.ts` },
-    ...['core', 'http', 'mcp', 'ai', 'analytics'].map((p) => ({ find: `@eeao/${p}`, replacement: `${pkgs}${p}/src/index.ts` })),
+    { find: '@buildwf/realtime-bwf/plugin', replacement: `${pkgs}bwf/src/plugin.ts` },
+    { find: '@buildwf/realtime-bwf/middleware', replacement: `${pkgs}bwf/src/middleware.ts` },
+    { find: '@buildwf/realtime-bwf', replacement: `${pkgs}bwf/src/index.ts` },
+    { find: '@buildwf/realtime-http/client', replacement: `${pkgs}http/src/client.ts` },
+    ...['core', 'http', 'mcp', 'ai', 'analytics'].map((p) => ({ find: p === 'core' ? '@buildwf/realtime' : `@buildwf/realtime-${p}`, replacement: `${pkgs}${p}/src/index.ts` })),
   ];
 }

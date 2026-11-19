@@ -1,5 +1,5 @@
-import type { CallResult, Registry, Surface } from '@eeao/core';
-import { BUILTIN_ERRORS } from '@eeao/core';
+import type { CallResult, Registry, Surface } from '@buildwf/realtime';
+import { BUILTIN_ERRORS } from '@buildwf/realtime';
 
 export type RpcHandlerOptions = {
   /** Path prefix for procedures, the manifest and OpenAPI. Default "/rpc". */

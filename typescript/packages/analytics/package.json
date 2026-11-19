@@ -1,5 +1,5 @@
 {
-  "name": "@eeao/analytics",
+  "name": "@buildwf/realtime-analytics",
   "version": "0.1.0",
   "description": "Analytics providers for eeao: Workers Analytics Engine, PostHog",
   "type": "module",
@@ -16,7 +16,7 @@
   ],
   "license": "MIT",
   "dependencies": {
-    "@eeao/core": "0.1.0"
+    "@buildwf/realtime": "0.1.0"
   },
   "repository": {
     "type": "git",

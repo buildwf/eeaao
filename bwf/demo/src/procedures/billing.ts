@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { procedure } from '@eeao/bwf';
+import { procedure } from '@buildwf/realtime-bwf';
 
 /**
  * A webhook: no user, so no auth, but it is still a procedure with a validated input,

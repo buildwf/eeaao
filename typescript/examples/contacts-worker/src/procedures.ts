@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { anyOf, bearerAuth, createProcedures } from '@eeao/core';
+import { anyOf, bearerAuth, createProcedures } from '@buildwf/realtime';
 
 export type User = { id: string; orgId: string; role: 'admin' | 'member' };
 export type Env = {

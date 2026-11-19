@@ -1,6 +1,6 @@
 // Files starting with _ are not scanned for procedures: shared auth, profiles and schemas.
 import { z } from 'zod';
-import { apiTokens, profile } from '@eeao/bwf';
+import { apiTokens, profile } from '@buildwf/realtime-bwf';
 import { db, eq } from '@buildwf/bwf/db';
 import { apiTokens as tokensTable } from '@schema';
 

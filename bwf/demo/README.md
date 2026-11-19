@@ -9,7 +9,7 @@ Everything below was run for real on 2026-11-13. Full transcripts are in [output
 Needs Node 24.22 or later (bwf requires it).
 
 ```sh
-npm install          # also links ../../typescript/node_modules, since @eeao/* isn't published yet
+npm install          # also links ../../typescript/node_modules, so the demo uses this repo's source
 npx bwf db seed     # creates the local D1 database: 3 contacts, 3 API tokens
 npm run demo         # starts `vite dev`, calls every surface, prints what came back
 npm run failures     # shows every way an incomplete procedure gets stopped
@@ -25,8 +25,8 @@ The setup is three small pieces:
 
 | File | What it is |
 | --- | --- |
-| `vite.config.ts` | `plugins: [bwfPlugin(), eeao()]`. The source aliases below that are only there until `@eeao/*` is published. |
-| `middleware/00.eeao.ts` | One line, written by `npx eeao init`: `export { default } from '@eeao/bwf/middleware'` |
+| `vite.config.ts` | `plugins: [bwfPlugin(), eeao()]`. The source aliases below that are there so the demo runs on this repo's source. |
+| `middleware/00.eeao.ts` | One line, written by `npx eeao init`: `export { default } from '@buildwf/realtime-bwf/middleware'` |
 | `bwf.config.ts` | The Analytics Engine line. bwf can't infer that binding from an import. |
 
 The rest is ordinary app code: procedures in `src/procedures/`, schema in `db/schema.ts`. There's no registry file, no route files and no Worker `fetch`, and `env` is typed without a generic.
@@ -133,12 +133,12 @@ eeao found 1 problem(s):
 
 ## Where the code is
 
-- `../../typescript/packages/bwf/`: the new `@eeao/bwf` package (about 180 lines). It has three parts:
+- `../../typescript/packages/bwf/`: the new `@buildwf/realtime-bwf` package (about 180 lines). It has three parts:
   - `plugin.ts` finds procedures and runs the route guard and stub check.
   - `middleware.ts` serves `/rpc`, `/mcp`, the AI tool endpoints and the dev-only `audit.md` and `/__eeao`.
   - `devtools.ts` and `devtools.html` are the call visualizers (dev only).
   - `index.ts` exports `procedure` and `profile` typed with bwf's env, plus the `apiTokens()` provider.
-- The other `@eeao/*` packages are used unchanged.
+- The other Realtime packages are used unchanged.
 
 ## Call visualizers (/__eeao)
 

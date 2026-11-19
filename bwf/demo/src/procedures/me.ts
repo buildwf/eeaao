@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { procedure } from '@eeao/bwf';
+import { procedure } from '@buildwf/realtime-bwf';
 import { signedIn } from './_shared';
 
 /** No input, no authz needed: the caller only ever sees themselves. */

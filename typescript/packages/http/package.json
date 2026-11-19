@@ -1,5 +1,5 @@
 {
-  "name": "@eeao/http",
+  "name": "@buildwf/realtime-http",
   "version": "0.1.0",
   "description": "Fetch handler, OpenAPI and typed client for an eeao registry",
   "type": "module",
@@ -20,7 +20,7 @@
   ],
   "license": "MIT",
   "dependencies": {
-    "@eeao/core": "0.1.0"
+    "@buildwf/realtime": "0.1.0"
   },
   "repository": {
     "type": "git",

@@ -18,9 +18,9 @@ export function eeao(opts: { dir?: string; analytics?: string } = {}): Plugin {
       const files = globSync(`${dir}/**/*.{ts,tsx,js}`, { cwd: root }).filter((f) => !/\.(test|spec)\./.test(f)).sort();
       const imports = files.map((f, i) => `import * as m${i} from ${JSON.stringify(join(root, f))};`);
       return [
-        `import { defineRegistry } from '@eeao/core';`,
-        `import { analyticsEngine } from '@eeao/analytics';`,
-        `import { rpcHandler } from '@eeao/http';`,
+        `import { defineRegistry } from '@buildwf/realtime';`,
+        `import { analyticsEngine } from '@buildwf/realtime-analytics';`,
+        `import { rpcHandler } from '@buildwf/realtime-http';`,
         ...imports,
         `const found = [${files.map((_, i) => `...Object.values(m${i})`).join(', ')}].filter((v) => v && (v['~eeao'] === 'procedure' || v['~eeao'] === 'builder'));`,
         `export const registry = defineRegistry(found, { analytics: analyticsEngine({ binding: ${JSON.stringify(opts.analytics ?? 'ANALYTICS')} }) });`,

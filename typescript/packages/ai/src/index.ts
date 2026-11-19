@@ -1,4 +1,4 @@
-import type { CallResult, Exec, JsonSchema, LoadedProcedure, Registry } from '@eeao/core';
+import type { CallResult, Exec, JsonSchema, LoadedProcedure, Registry } from '@buildwf/realtime';
 
 export type ToolInfo = {
   name: string;

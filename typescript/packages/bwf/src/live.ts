@@ -1,4 +1,4 @@
-import type { LiveTransport } from '@eeao/live';
+import type { LiveTransport } from '@buildwf/realtime-live';
 
 /** The part of bwf's `@buildwf/bwf/live/client` this adapter uses. Pass `connectLiveStream` itself. */
 export type ConnectLiveStream = (

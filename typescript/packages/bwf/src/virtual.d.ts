@@ -1,7 +1,7 @@
 /// <reference types="vite/client" />
 // The registry module the eeao() Vite plugin generates from your procedures folder.
 declare module 'virtual:eeao/registry' {
-  import type { Registry } from '@eeao/core';
+  import type { Registry } from '@buildwf/realtime';
   export const registry: Registry;
   export const app: { name: string; version: string; basePath: string; mcpRoute: string };
 }
