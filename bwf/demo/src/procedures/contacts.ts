@@ -1,6 +1,6 @@
 import { z } from 'zod';
-import { procedure } from '@buildwf/realtime-bwf';
-import { and, db, eq, like } from '@buildwf/bwf/db';
+import { procedure } from '@builtbyfriends/realtime-bwf';
+import { and, db, eq, like } from '@builtbyfriends/bwf/db';
 import { contacts } from '@schema';
 import { adminOnly, Contact, signedIn } from './_shared';
 

@@ -1,4 +1,4 @@
-import type { Manifest, ManifestEntry } from '@buildwf/realtime';
+import type { Manifest, ManifestEntry } from '@builtbyfriends/realtime';
 
 type Io = {
   argv: string[];

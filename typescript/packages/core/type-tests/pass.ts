@@ -2,7 +2,7 @@
 // if one stops failing, tsc reports the unused directive and the build breaks.
 import { expectTypeOf } from 'expect-type';
 import { z } from 'zod';
-import { bearerAuth, createProcedures, defineRegistry, type InputOf, type OutputOf } from '@buildwf/realtime';
+import { bearerAuth, createProcedures, defineRegistry, type InputOf, type OutputOf } from '@builtbyfriends/realtime';
 
 type Env = { DB: { get(id: string): string | null } };
 type User = { id: string; orgId: string };

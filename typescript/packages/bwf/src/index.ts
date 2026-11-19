@@ -1,4 +1,4 @@
-import { bearerAuth, createProcedures, type Registry } from '@buildwf/realtime';
+import { bearerAuth, createProcedures, type Registry } from '@builtbyfriends/realtime';
 
 declare global {
   // bwf generates this from bwf.config.ts and your imports (.bwf/bindings.d.ts).
@@ -26,7 +26,7 @@ export function apiTokens<User extends { id: string }>(lookup: (hash: string) =>
   });
 }
 
-export { anyOf, bearerAuth } from '@buildwf/realtime';
+export { anyOf, bearerAuth } from '@builtbyfriends/realtime';
 
 let current: Registry | undefined;
 /** @internal The eeao middleware calls this when the Worker starts. */
@@ -36,7 +36,7 @@ export function setAppRegistry(registry: Registry) {
 
 /**
  * The app's registry, for code that runs agents inside the Worker: pass it to
- * anthropicTools() and runTool() from @buildwf/realtime-ai.
+ * anthropicTools() and runTool() from @builtbyfriends/realtime-ai.
  */
 export function appRegistry(): Registry {
   if (!current) throw new Error('appRegistry() is only available inside a request, after the eeao middleware has loaded');

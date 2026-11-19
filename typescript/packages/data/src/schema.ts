@@ -1,4 +1,4 @@
-import type { AnySchema } from '@buildwf/realtime';
+import type { AnySchema } from '@builtbyfriends/realtime';
 
 export type TableDef<D = any> = {
   /** Optional Standard Schema (zod, valibot, arktype) checked on every insert and replace. */

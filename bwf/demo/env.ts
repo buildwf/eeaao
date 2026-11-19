@@ -1,4 +1,4 @@
-import { defineEnv, string, url } from '@buildwf/bwf/env';
+import { defineEnv, string, url } from '@builtbyfriends/bwf/env';
 
 // Only the in-app assistant (src/procedures/assistant.ts) uses these.
 export default defineEnv({

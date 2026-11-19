@@ -34,7 +34,7 @@ const http = async (label, name, body, token) => {
 
 try {
   if (!base) {
-    execFileSync('npx', ['@buildwf/bwf', 'db', 'seed'], { cwd: root, stdio: 'ignore' });
+    execFileSync('npx', ['@builtbyfriends/bwf', 'db', 'seed'], { cwd: root, stdio: 'ignore' });
     dev = spawn('npx', ['vite', 'dev', '--port', String(port), '--strictPort'], { cwd: root, stdio: ['ignore', 'pipe', 'pipe'] });
     dev.stdout.on('data', (d) => (devLog += d));
     dev.stderr.on('data', (d) => (devLog += d));

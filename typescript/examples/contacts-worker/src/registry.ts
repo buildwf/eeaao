@@ -1,5 +1,5 @@
-import { defineRegistry } from '@buildwf/realtime';
-import { analyticsEngine } from '@buildwf/realtime-analytics';
+import { defineRegistry } from '@builtbyfriends/realtime';
+import { analyticsEngine } from '@builtbyfriends/realtime-analytics';
 import { deleteContact, getContact, searchContacts, status } from './procedures.js';
 
 // Built at module scope on purpose: if a procedure is incomplete this throws while the

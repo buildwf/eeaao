@@ -1,7 +1,7 @@
 import { z } from 'zod';
-import { appRegistry, procedure } from '@buildwf/realtime-bwf';
-import { anthropicTools, runTool, toolResultContent } from '@buildwf/realtime-ai';
-import { env as config } from '@buildwf/bwf/env';
+import { appRegistry, procedure } from '@builtbyfriends/realtime-bwf';
+import { anthropicTools, runTool, toolResultContent } from '@builtbyfriends/realtime-ai';
+import { env as config } from '@builtbyfriends/bwf/env';
 import { signedIn } from './_shared';
 
 const Block = z.object({ type: z.string() }).passthrough();

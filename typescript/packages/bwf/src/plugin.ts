@@ -4,7 +4,7 @@ import { join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 export type EeaoPluginOptions = {
-  /** Where procedures live. Default "src/procedures" (bwf scans src/ for bindings, so @buildwf/bwf/db etc. just work). */
+  /** Where procedures live. Default "src/procedures" (bwf scans src/ for bindings, so @builtbyfriends/bwf/db etc. just work). */
   dir?: string;
   /** Analytics Engine binding. Default "ANALYTICS". Pass false only together with an explicit reason in code review. */
   analyticsBinding?: string;
@@ -42,8 +42,8 @@ export function eeao(options: EeaoPluginOptions = {}): Plugin {
   const problems = (): string[] => {
     const out: string[] = [];
     const mwDir = join(root, 'middleware');
-    const stub = existsSync(mwDir) && readdirSync(mwDir).some((f) => readFileSync(join(mwDir, f), 'utf8').includes('@buildwf/realtime-bwf/middleware'));
-    if (!stub) out.push('middleware/ has no eeao middleware. Run `npx eeao init`, or create middleware/00.eeao.ts containing: export { default } from \'@buildwf/realtime-bwf/middleware\';');
+    const stub = existsSync(mwDir) && readdirSync(mwDir).some((f) => readFileSync(join(mwDir, f), 'utf8').includes('@builtbyfriends/realtime-bwf/middleware'));
+    if (!stub) out.push('middleware/ has no eeao middleware. Run `npx eeao init`, or create middleware/00.eeao.ts containing: export { default } from \'@builtbyfriends/realtime-bwf/middleware\';');
     const routesDir = join(root, 'routes');
     if (existsSync(routesDir)) {
       for (const f of globSync('**/*.{ts,tsx,js,jsx,mts,mjs}', { cwd: routesDir })) {
@@ -77,8 +77,8 @@ export function eeao(options: EeaoPluginOptions = {}): Plugin {
       const files = procedureFiles();
       const logEvents = dev && options.logEventsInDev !== false;
       return [
-        `import { defineRegistry } from '@buildwf/realtime';`,
-        `import { analyticsEngine, fanOut } from '@buildwf/realtime-analytics';`,
+        `import { defineRegistry } from '@builtbyfriends/realtime';`,
+        `import { analyticsEngine, fanOut } from '@builtbyfriends/realtime-analytics';`,
         ...files.map((f, i) => `import * as m${i} from ${JSON.stringify('/' + f)};`),
         // Pick up unfinished builders too, so a procedure missing .handler() fails instead of vanishing.
         `const found = [${files.map((_, i) => `...Object.values(m${i})`).join(', ')}]`,

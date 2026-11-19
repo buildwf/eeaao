@@ -1,7 +1,7 @@
 /// <reference path="./virtual.d.ts" />
-import { rpcHandler } from '@buildwf/realtime-http';
-import { mcpHandler } from '@buildwf/realtime-mcp';
-import { anthropicTools, runTool, toolResultContent } from '@buildwf/realtime-ai';
+import { rpcHandler } from '@builtbyfriends/realtime-http';
+import { mcpHandler } from '@builtbyfriends/realtime-mcp';
+import { anthropicTools, runTool, toolResultContent } from '@builtbyfriends/realtime-ai';
 import { app, registry } from 'virtual:eeao/registry';
 import { createDevtools } from './devtools.js';
 import { setAppRegistry } from './index.js';
@@ -39,7 +39,7 @@ async function handle(request: Request, env: any, waitUntil: (p: Promise<unknown
   if (mcp.matches(request)) return mcp(request, env, ctx);
 
   // AI tools over HTTP, for agent runtimes outside this Worker. Inside the Worker, call
-  // anthropicTools(registry) and runTool(...) from @buildwf/realtime-ai directly.
+  // anthropicTools(registry) and runTool(...) from @builtbyfriends/realtime-ai directly.
   if (path === `${app.basePath}/ai/tools.json` && request.method === 'GET') return new Response(tools, { headers: { 'content-type': 'application/json' } });
   if (path === `${app.basePath}/ai/run` && request.method === 'POST') {
     const body = (await request.json().catch(() => null)) as { tool?: string; input?: unknown; approved?: boolean } | null;

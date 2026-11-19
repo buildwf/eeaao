@@ -14,7 +14,7 @@
     "@standard-schema/spec": "^1.1.0",
     "hono": "^4.13.18",
     "vite": "^8.3.8",
-    "@buildwf/bwf": "^1.9.1",
+    "@builtbyfriends/bwf": "^1.9.1",
     "zod": "^4.6.7"
   },
   "type": "module"

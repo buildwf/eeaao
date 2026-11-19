@@ -3,7 +3,7 @@
 // outbound fetch the Worker makes (including model API calls), and the step-by-step
 // trace of each procedure call. The middleware only loads this under `vite dev`, so
 // production builds leave it out entirely.
-import type { CallTrace, Registry, ToolGateTrace, TraceEvent } from '@buildwf/realtime';
+import type { CallTrace, Registry, ToolGateTrace, TraceEvent } from '@builtbyfriends/realtime';
 // The page itself (devtools.html), inlined by the eeao() plugin as a string.
 import page from 'virtual:eeao/devtools-page';
 

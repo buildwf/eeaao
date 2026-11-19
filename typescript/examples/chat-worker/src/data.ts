@@ -1,5 +1,5 @@
 import { DurableObject } from 'cloudflare:workers';
-import { defineData, defineSchema, table } from '@buildwf/realtime-data';
+import { defineData, defineSchema, table } from '@builtbyfriends/realtime-data';
 
 export type Message = { channel: string; author: string; body: string; at: number };
 

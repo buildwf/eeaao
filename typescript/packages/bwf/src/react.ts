@@ -1,5 +1,5 @@
-import { createLive, type LiveOptions, type Typed } from '@buildwf/realtime-live';
-import { createLiveHooks } from '@buildwf/realtime-live/react';
+import { createLive, type LiveOptions, type Typed } from '@builtbyfriends/realtime-live';
+import { createLiveHooks } from '@builtbyfriends/realtime-live/react';
 import { bwfTransport, type BwfTransportOptions } from './live.js';
 
 export type { ConnectLiveStream } from './live.js';
@@ -8,7 +8,7 @@ export type { ConnectLiveStream } from './live.js';
  * `useQuery` and `useMutation` for a bwf app: an eeao RPC call plus bwf live topics.
  *
  *   // src/live.ts
- *   import { connectLiveStream } from '@buildwf/bwf/live/client';
+ *   import { connectLiveStream } from '@builtbyfriends/bwf/live/client';
  *   export const { useQuery, useMutation, live } = createBwfLive<typeof registry>({
  *     client: createClient('/rpc'),
  *     connect: connectLiveStream,

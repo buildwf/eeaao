@@ -1,4 +1,4 @@
-import type { CallResult, Exec, JsonSchema, LoadedProcedure, Registry } from '@buildwf/realtime';
+import type { CallResult, Exec, JsonSchema, LoadedProcedure, Registry } from '@builtbyfriends/realtime';
 
 export type ToolInfo = {
   name: string;

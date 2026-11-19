@@ -2,8 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { z } from 'zod';
 import * as v from 'valibot';
 import { toStandardJsonSchema } from '@valibot/to-json-schema';
-import { defineRegistry, procedure } from '@buildwf/realtime';
-import { memoryAnalytics } from '@buildwf/realtime-analytics';
+import { defineRegistry, procedure } from '@builtbyfriends/realtime';
+import { memoryAnalytics } from '@builtbyfriends/realtime-analytics';
 import { getContact, ping, purge } from './fixtures.js';
 
 const R = (why: string) => ({ reason: why as string });

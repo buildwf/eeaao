@@ -1,7 +1,7 @@
 import { z } from 'zod';
-import { bearerAuth, createProcedures, defineRegistry } from '@buildwf/realtime';
-import { analyticsEngine } from '@buildwf/realtime-analytics';
-import { rpcHandler } from '@buildwf/realtime-http';
+import { bearerAuth, createProcedures, defineRegistry } from '@builtbyfriends/realtime';
+import { analyticsEngine } from '@builtbyfriends/realtime-analytics';
+import { rpcHandler } from '@builtbyfriends/realtime-http';
 type User = { id: string; orgId: string };
 type Env = { API_TOKENS: string; ANALYTICS: { writeDataPoint(p: unknown): void } };
 const { procedure } = createProcedures<Env>();

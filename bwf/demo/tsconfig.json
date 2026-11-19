@@ -14,23 +14,23 @@
     "noEmit": true,
     "allowImportingTsExtensions": true,
     "types": [
-      "@buildwf/bwf/env",
+      "@builtbyfriends/bwf/env",
       "@cloudflare/workers-types"
     ],
     "paths": {
       "@schema": [
         "./db/schema.ts"
       ],
-      "@buildwf/realtime-bwf": [
+      "@builtbyfriends/realtime-bwf": [
         "../../typescript/packages/bwf/src/index.ts"
       ],
-      "@buildwf/realtime-bwf/*": [
+      "@builtbyfriends/realtime-bwf/*": [
         "../../typescript/packages/bwf/src/*.ts"
       ],
-      "@buildwf/realtime": [
+      "@builtbyfriends/realtime": [
         "../../typescript/packages/core/src/index.ts"
       ],
-      "@buildwf/realtime-*": [
+      "@builtbyfriends/realtime-*": [
         "../../typescript/packages/*/src/index.ts"
       ]
     }

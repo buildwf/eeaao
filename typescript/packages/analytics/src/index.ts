@@ -1,4 +1,4 @@
-import type { AnalyticsEvent, AnalyticsProvider } from '@buildwf/realtime';
+import type { AnalyticsEvent, AnalyticsProvider } from '@builtbyfriends/realtime';
 
 type AnalyticsEngineDataset = {
   writeDataPoint(point: { indexes?: string[]; blobs?: (string | null)[]; doubles?: number[] }): void;
