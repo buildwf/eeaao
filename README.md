@@ -18,7 +18,7 @@ The packages are `@builtbyfriends/realtime` and `@builtbyfriends/realtime-*` on 
 
 ## Use it with bwf
 
-[bwf](https://github.com/buildwf/platform) builds and deploys apps to Cloudflare Workers. `@builtbyfriends/realtime-bwf` connects Realtime to a bwf app. It's the only package here that knows about bwf, and a test checks that.
+[bwf](https://github.com/builtbyfriends/platform) builds and deploys apps to Cloudflare Workers. `@builtbyfriends/realtime-bwf` connects Realtime to a bwf app. It's the only package here that knows about bwf, and a test checks that.
 
 `@builtbyfriends/realtime-bwf` gives a bwf app:
 
