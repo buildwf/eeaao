@@ -4,8 +4,30 @@
   "description": "Must-choose procedure builder and registry",
   "type": "module",
   "sideEffects": false,
-  "exports": { ".": { "types": "./dist/index.d.ts", "default": "./dist/index.js" } },
-  "files": ["dist", "src"],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "src"
+  ],
   "license": "MIT",
-  "dependencies": { "@standard-schema/spec": "^1.1.0" }
+  "dependencies": {
+    "@standard-schema/spec": "^1.1.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/buildwf/realtime.git",
+    "directory": "typescript/packages/core"
+  },
+  "homepage": "https://github.com/buildwf/realtime#readme",
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "prepack": "cp ../../../LICENSE LICENSE"
+  }
 }

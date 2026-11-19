@@ -4,7 +4,27 @@
   "description": "One Durable Object per deployment: transactional SQLite documents, indexes, FTS5, vectors and cancellable scheduled jobs",
   "type": "module",
   "sideEffects": false,
-  "exports": { ".": { "types": "./dist/index.d.ts", "default": "./dist/index.js" } },
-  "files": ["dist", "src"],
-  "license": "MIT"
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "src"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/buildwf/realtime.git",
+    "directory": "typescript/packages/data"
+  },
+  "homepage": "https://github.com/buildwf/realtime#readme",
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "prepack": "cp ../../../LICENSE LICENSE"
+  }
 }

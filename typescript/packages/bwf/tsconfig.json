@@ -1,6 +1,6 @@
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": { "rootDir": "src", "outDir": "dist", "jsx": "react-jsx" },
-  "include": ["src/live.ts", "src/react.ts", "src/data.ts"],
-  "references": [{ "path": "../core" }, { "path": "../live" }]
+  "include": ["src"],
+  "references": [{ "path": "../core" }, { "path": "../live" }, { "path": "../http" }, { "path": "../mcp" }, { "path": "../ai" }, { "path": "../analytics" }]
 }

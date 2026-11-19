@@ -3,10 +3,36 @@
   "version": "0.1.0",
   "description": "Command line client for an eeao Worker, driven by its manifest",
   "type": "module",
-  "bin": { "eeao": "./dist/bin.js" },
-  "exports": { ".": { "types": "./dist/index.d.ts", "default": "./dist/index.js" } },
-  "files": ["dist", "src"],
-  "engines": { "node": ">=20" },
+  "bin": {
+    "eeao": "./dist/bin.js"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "src"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
   "license": "MIT",
-  "dependencies": { "@eeao/core": "0.1.0" }
+  "dependencies": {
+    "@eeao/core": "0.1.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/buildwf/realtime.git",
+    "directory": "typescript/packages/cli"
+  },
+  "homepage": "https://github.com/buildwf/realtime#readme",
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "prepack": "cp ../../../LICENSE LICENSE"
+  }
 }
