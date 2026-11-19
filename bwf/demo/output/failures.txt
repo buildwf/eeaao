@@ -21,7 +21,7 @@ $ npx vite build   (exit 0: the bundler never type-checks)
 
 $ start the built Worker, as Cloudflare does on upload
 Worker failed to start, so Cloudflare would reject the deploy:
-Uncaught Error: eeao registry has 8 problem(s):
+Uncaught Error: realtime registry has 8 problem(s):
   - "contacts.sneaky": undecided: authz, input, errors, analytics, mcp, cli, aiTool
   - "contacts.weak": authn opt-out: "todo" is a placeholder, not a reason
   - "contacts.weak": authz opt-out: "todo" is a placeholder, not a reason
@@ -38,15 +38,15 @@ Uncaught Error: eeao registry has 8 problem(s):
 ==============================================================================
 
 $ npx vite build   (exit 1)
-eeao found 1 problem(s):
-  - routes/api/contacts.ts is a plain bwf route, so it skips auth, authz, input, output, errors, analytics, MCP, CLI and AI tool decisions. Move it to src/procedures/ as a procedure, or keep it and add "// eeao-allow: <why this must be a raw route>" (at least three words).
+realtime found 1 problem(s):
+  - routes/api/contacts.ts is a plain bwf route, so it skips auth, authz, input, output, errors, analytics, MCP, CLI and AI tool decisions. Move it to src/procedures/ as a procedure, or keep it and add "// realtime-allow: <why this must be a raw route>" (at least three words).
 
 ==============================================================================
 4. Route guard escape hatch: a raw route with a stated reason is allowed
 ==============================================================================
 
 $ head -1 routes/webhooks/stripe.ts
-// eeao-allow: Stripe needs a raw body for signature checks
+// realtime-allow: Stripe needs a raw body for signature checks
 
 $ npx vite build   (exit 0)
 
@@ -54,6 +54,6 @@ $ npx vite build   (exit 0)
 5. Missing middleware file: nothing would serve /rpc or load the registry, so the build fails
 ==============================================================================
 
-$ rm middleware/00.eeao.ts && npx vite build   (exit 1)
-eeao found 1 problem(s):
-  - middleware/ has no eeao middleware. Run `npx eeao init`, or create middleware/00.eeao.ts containing: export { default } from '@builtbyfriends/realtime-bwf/middleware';
+$ rm middleware/00.realtime.ts && npx vite build   (exit 1)
+realtime found 1 problem(s):
+  - middleware/ has no realtime middleware. Run `npx realtime init`, or create middleware/00.realtime.ts containing: export { default } from '@builtbyfriends/realtime-bwf/middleware';

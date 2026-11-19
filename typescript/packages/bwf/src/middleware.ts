@@ -2,7 +2,7 @@
 import { rpcHandler } from '@builtbyfriends/realtime-http';
 import { mcpHandler } from '@builtbyfriends/realtime-mcp';
 import { anthropicTools, runTool, toolResultContent } from '@builtbyfriends/realtime-ai';
-import { app, registry } from 'virtual:eeao/registry';
+import { app, registry } from 'virtual:realtime/registry';
 import { createDevtools } from './devtools.js';
 import { setAppRegistry } from './index.js';
 
@@ -13,7 +13,7 @@ setAppRegistry(registry);
 const rpc = rpcHandler(registry, { basePath: app.basePath, openapi: { title: app.name, version: app.version } });
 const mcp = mcpHandler(registry, { name: app.name, version: app.version, route: app.mcpRoute });
 const tools = JSON.stringify(anthropicTools(registry));
-// Call visualizers at /__eeao, only under `vite dev`. The build replaces import.meta.env.DEV
+// Call visualizers at /__realtime, only under `vite dev`. The build replaces import.meta.env.DEV
 // with false, so this and the devtools module are dropped from production bundles.
 const devtools = import.meta.env.DEV ? createDevtools(registry, app) : null;
 const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } });

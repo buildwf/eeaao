@@ -25,7 +25,7 @@ const f: typeof fetch = async (input, init) => rpc(new Request(input as string, 
 async function cli(...argv: string[]) {
   let out = '';
   let err = '';
-  const code = await run({ argv, env: { EEAO_URL: 'https://api.test', EEAO_TOKEN: 'bob' }, fetch: f, stdout: (s) => (out += s), stderr: (s) => (err += s) });
+  const code = await run({ argv, env: { REALTIME_URL: 'https://api.test', REALTIME_TOKEN: 'bob' }, fetch: f, stdout: (s) => (out += s), stderr: (s) => (err += s) });
   return { code, out, err };
 }
 
@@ -65,9 +65,9 @@ describe('cli', () => {
     const r = await cli('contacts', 'get', '--org-id', 'o1', '--id', 'missing');
     expect(r).toMatchObject({ code: 1, err: 'error NOT_FOUND: No such contact\n' });
     let err = '';
-    const code = await run({ argv: ['contacts', 'get', '--org-id', 'o1', '--id', 'c1'], env: { EEAO_URL: 'https://api.test' }, fetch: f, stdout: () => {}, stderr: (s) => (err += s) });
+    const code = await run({ argv: ['contacts', 'get', '--org-id', 'o1', '--id', 'c1'], env: { REALTIME_URL: 'https://api.test' }, fetch: f, stdout: () => {}, stderr: (s) => (err += s) });
     expect(code).toBe(1);
-    expect(err).toContain('Set --token or EEAO_TOKEN');
+    expect(err).toContain('Set --token or REALTIME_TOKEN');
   });
 
   it('shows per-command help with flags and errors', async () => {

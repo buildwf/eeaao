@@ -29,7 +29,7 @@ export function toResponse(result: CallResult): Response {
 
 /**
  * Fetch handler for the registry: every procedure is `POST {basePath}/{name}` with a JSON body.
- * CLI calls send `x-eeao-surface: cli` so analytics can tell them apart.
+ * CLI calls send `x-realtime-surface: cli` so analytics can tell them apart.
  */
 export function rpcHandler(registry: Registry<any>, options: RpcHandlerOptions = {}): RpcHandler {
   const base = (options.basePath ?? '/rpc').replace(/\/$/, '');
@@ -60,7 +60,7 @@ export function rpcHandler(registry: Registry<any>, options: RpcHandlerOptions =
         return toResponse({ ok: false, status: 400, code: 'INVALID_INPUT', message: 'Body is not valid JSON' });
       }
     }
-    const surface: Surface = request.headers.get('x-eeao-surface') === 'cli' ? 'cli' : 'http';
+    const surface: Surface = request.headers.get('x-realtime-surface') === 'cli' ? 'cli' : 'http';
     const result = await registry.call(rest, input, { request, env, surface, waitUntil: (p) => ctx.waitUntil(p) });
     return toResponse(result);
   };

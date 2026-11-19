@@ -1,3 +1,3 @@
 { "compilerOptions": { "target": "ES2022", "module": "ESNext", "moduleResolution": "Bundler", "strict": true, "skipLibCheck": true, "noEmit": true, "allowImportingTsExtensions": true, "types": ["@builtbyfriends/bwf/env"],
-  "paths": { "@builtbyfriends/realtime": ["./eeao/core/src/index.ts"], "@builtbyfriends/realtime-http": ["./eeao/http/src/index.ts"], "@builtbyfriends/realtime-analytics": ["./eeao/analytics/src/index.ts"] } },
-  "include": ["eeao-app.ts", "routes", "middleware", ".bwf/**/*.d.ts"] }
+  "paths": { "@builtbyfriends/realtime": ["./realtime/core/src/index.ts"], "@builtbyfriends/realtime-http": ["./realtime/http/src/index.ts"], "@builtbyfriends/realtime-analytics": ["./realtime/analytics/src/index.ts"] } },
+  "include": ["realtime-app.ts", "routes", "middleware", ".bwf/**/*.d.ts"] }

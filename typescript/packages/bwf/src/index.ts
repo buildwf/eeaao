@@ -29,7 +29,7 @@ export function apiTokens<User extends { id: string }>(lookup: (hash: string) =>
 export { anyOf, bearerAuth } from '@builtbyfriends/realtime';
 
 let current: Registry | undefined;
-/** @internal The eeao middleware calls this when the Worker starts. */
+/** @internal The realtime middleware calls this when the Worker starts. */
 export function setAppRegistry(registry: Registry) {
   current = registry;
 }
@@ -39,6 +39,6 @@ export function setAppRegistry(registry: Registry) {
  * anthropicTools() and runTool() from @builtbyfriends/realtime-ai.
  */
 export function appRegistry(): Registry {
-  if (!current) throw new Error('appRegistry() is only available inside a request, after the eeao middleware has loaded');
+  if (!current) throw new Error('appRegistry() is only available inside a request, after the realtime middleware has loaded');
   return current;
 }

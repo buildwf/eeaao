@@ -1,7 +1,7 @@
 {
   "name": "@builtbyfriends/realtime-bwf",
   "version": "0.1.0",
-  "description": "Zero-setup eeao for bwf: a Vite plugin, one middleware file, live queries and the data layer hookup",
+  "description": "Zero-setup realtime for bwf: a Vite plugin, one middleware file, live queries and the data layer hookup",
   "type": "module",
   "exports": {
     ".": {

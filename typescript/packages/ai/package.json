@@ -1,7 +1,7 @@
 {
   "name": "@builtbyfriends/realtime-ai",
   "version": "0.1.0",
-  "description": "AI tool definitions (Anthropic API, AI SDK) for an eeao registry",
+  "description": "AI tool definitions (Anthropic API, AI SDK) for an realtime registry",
   "type": "module",
   "sideEffects": false,
   "exports": {

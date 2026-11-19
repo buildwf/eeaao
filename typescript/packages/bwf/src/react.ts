@@ -5,7 +5,7 @@ import { bwfTransport, type BwfTransportOptions } from './live.js';
 export type { ConnectLiveStream } from './live.js';
 
 /**
- * `useQuery` and `useMutation` for a bwf app: an eeao RPC call plus bwf live topics.
+ * `useQuery` and `useMutation` for a bwf app: an realtime RPC call plus bwf live topics.
  *
  *   // src/live.ts
  *   import { connectLiveStream } from '@builtbyfriends/bwf/live/client';

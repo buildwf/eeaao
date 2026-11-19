@@ -1,6 +1,6 @@
 # @builtbyfriends/realtime-analytics
 
-Analytics providers for eeao: Workers Analytics Engine, PostHog.
+Analytics providers for realtime: Workers Analytics Engine, PostHog.
 
 It's part of [Realtime](https://github.com/builtbyfriends/realtime), a procedure builder for Cloudflare Workers.
 

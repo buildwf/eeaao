@@ -1,5 +1,5 @@
 import { defineMiddleware } from '@builtbyfriends/bwf';
-import { registry } from '../eeao-app';
+import { registry } from '../realtime-app';
 // Importing the registry here is meant to evaluate it when the Worker starts.
 void registry;
 export default defineMiddleware(async (_c, next) => { await next(); });

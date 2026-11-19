@@ -1,6 +1,6 @@
 {
   "$schema": "../../node_modules/wrangler/config-schema.json",
-  "name": "eeao-chat-example",
+  "name": "realtime-chat-example",
   "main": "src/index.ts",
   "compatibility_date": "2026-11-01",
   "durable_objects": { "bindings": [{ "name": "DEPLOYMENT", "class_name": "Deployment" }] },
