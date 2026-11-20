@@ -41,6 +41,30 @@ describe('react hooks', () => {
     expect(handlers.size).toBe(0);
   });
 
+  it('keeps one handle when the input has the same keys in another order', async () => {
+    let subscribes = 0;
+    const transport: LiveTransport = {
+      subscribe: () => (subscribes++, () => {}),
+      onReconnect: () => () => {},
+    };
+    const call = vi.fn(async () => 'ok');
+    const live = createLive<any>({ client: { call }, transport, topics: { 'item.get': () => ['item'] } });
+    const { useQuery } = createLiveHooks<any>(live);
+
+    function Item({ input }: { input: object }) {
+      const q = useQuery('item.get', input);
+      return createElement('p', null, q.loading ? 'loading' : String(q.data));
+    }
+
+    const view = render(createElement(Item, { input: { a: 1, b: 2 } }));
+    await act(async () => void (await new Promise((r) => setTimeout(r, 10))));
+    view.rerender(createElement(Item, { input: { b: 2, a: 1 } }));
+    await act(async () => void (await new Promise((r) => setTimeout(r, 10))));
+    expect(screen.getByText('ok')).toBeTruthy();
+    expect(call).toHaveBeenCalledTimes(1);
+    expect(subscribes).toBe(1);
+  });
+
   it('useMutation tracks pending and error', async () => {
     const call = vi.fn(async (name: string) => {
       if (name === 'bad') throw new Error('nope');
