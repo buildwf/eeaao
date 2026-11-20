@@ -1,0 +1,25 @@
+name: Native clients
+
+on:
+  push:
+    branches: [main]
+    paths: ["Package.swift", "swift/**", "kotlin/**", "*.gradle.kts", "gradle/**", ".github/workflows/native-clients.yml"]
+  pull_request:
+    paths: ["Package.swift", "swift/**", "kotlin/**", "*.gradle.kts", "gradle/**", ".github/workflows/native-clients.yml"]
+
+jobs:
+  swift:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - run: swift test
+
+  kotlin:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - run: ./gradlew :realtime-live:test --no-daemon
