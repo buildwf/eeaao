@@ -65,6 +65,41 @@ describe('bwfTransport', () => {
     expect(v.count('x')).toBe(0);
   });
 
+  it('shares one bwf subscription per topic, and drops it after the last listener stops', async () => {
+    const v = fakeHost();
+    const t = bwfTransport({ connect: v.connect });
+    const heard = vi.fn();
+    const stops = await Promise.all(Array.from({ length: 300 }, () => t.subscribe('x', heard)));
+    expect(v.count('x')).toBe(1);
+    v.publish('x');
+    expect(heard).toHaveBeenCalledTimes(300);
+    for (const stop of stops.slice(1)) stop();
+    await Promise.resolve();
+    expect(v.count('x')).toBe(1);
+    stops[0]!();
+    await Promise.resolve();
+    expect(v.count('x')).toBe(0);
+    await t.subscribe('x', heard);
+    expect(v.count('x')).toBe(1);
+  });
+
+  it('fails the query when bwf refuses the topic, and asks again for the next one', async () => {
+    const v = fakeHost();
+    let refuse = true;
+    const connect: ConnectLiveStream = (url, options) => {
+      const stream = v.connect(url, options);
+      return {
+        ...stream,
+        subscribe: (o) => (refuse ? Promise.reject(new Error('FORBIDDEN')) : stream.subscribe(o)),
+      };
+    };
+    const t = bwfTransport({ connect });
+    await expect(t.subscribe('x', () => {})).rejects.toThrow('FORBIDDEN');
+    refuse = false;
+    await t.subscribe('x', () => {});
+    expect(v.count('x')).toBe(1);
+  });
+
   it('reports a reconnect only for opens after the first', async () => {
     const v = fakeHost();
     const t = bwfTransport({ connect: v.connect });
