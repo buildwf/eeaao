@@ -153,4 +153,58 @@ describe('live store', () => {
     await live.refetchAll();
     expect(call).toHaveBeenCalledTimes(3);
   });
+
+  describe('optimistic updates', () => {
+    function chat() {
+      let messages = ['hi'];
+      let fail = false;
+      const call = vi.fn(async (name: string, input: any) => {
+        if (name === 'messages.list') return [...messages];
+        await new Promise((r) => setTimeout(r, 100));
+        if (fail) throw new Error('refused');
+        messages = [...messages, input.body];
+        return null;
+      });
+      const live = createLive<any>({ client: { call }, transport: fakeTransport().transport, topics: { 'messages.list': () => ['messages'] } });
+      const q = live.query('messages.list', { channel: 'a' });
+      q.subscribe(() => {});
+      const optimistic = (body: string) => ({
+        optimistic: (store: any) => store.update('messages.list', { channel: 'a' }, (list: string[]) => [...list, body]),
+      });
+      return { live, q, call, optimistic, refuse: () => void (fail = true) };
+    }
+
+    it('shows the change at once, then the server answer', async () => {
+      const { live, q, optimistic } = chat();
+      await flush();
+      const sent = live.mutate('messages.send', { body: 'yo' }, optimistic('yo'));
+      expect(q.getSnapshot().data).toEqual(['hi', 'yo']);
+      await vi.advanceTimersByTimeAsync(150);
+      await sent;
+      await flush();
+      expect(q.getSnapshot()).toMatchObject({ status: 'ready', data: ['hi', 'yo'] });
+    });
+
+    it('puts the query back when the call fails', async () => {
+      const { live, q, optimistic, refuse } = chat();
+      await flush();
+      refuse();
+      const sent = live.mutate('messages.send', { body: 'yo' }, optimistic('yo'));
+      const failed = expect(sent).rejects.toThrow('refused');
+      expect(q.getSnapshot().data).toEqual(['hi', 'yo']);
+      await vi.advanceTimersByTimeAsync(150);
+      await failed;
+      expect(q.getSnapshot().data).toEqual(['hi']);
+    });
+
+    it('leaves queries alone that it was not asked to change, or that have no data yet', async () => {
+      const { live, optimistic } = chat();
+      const other = live.query('messages.list', { channel: 'b' });
+      other.subscribe(() => {});
+      const sent = live.mutate('messages.send', { body: 'yo' }, optimistic('yo'));
+      expect(other.getSnapshot().status).toBe('loading');
+      await vi.advanceTimersByTimeAsync(150);
+      await sent;
+    });
+  });
 });

@@ -233,4 +233,15 @@ export const { useQuery, useMutation, live } = createBwfLive<typeof registry>({
 ```
 
 Always set `onSubscribe` (`topicPolicy` refuses any topic without a matching rule).
+
+A mutation can show its result before the server answers. `optimistic` changes the data of watched
+queries right away. If the call fails, they go back to what they showed. Either way they fetch
+again, so the server's answer replaces the guess:
+
+```ts
+const send = useMutation('messages.send');
+send.mutate({ channel, body }, {
+  optimistic: (store) => store.update('messages.list', { channel }, (list) => [...list, body]),
+});
+```
 `examples/chat-worker` runs the data layer in workerd (`npm run e2e`).
