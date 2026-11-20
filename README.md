@@ -26,6 +26,8 @@ The packages are `@builtbyfriends/realtime` and `@builtbyfriends/realtime-*` on 
 - one middleware file that serves `/rpc`, `/mcp` and the AI tool endpoints
 - live queries over bwf's live streams, and the link to `@builtbyfriends/realtime-data`
 
+Native apps that sign in with a bearer token can listen to the same live streams. [The protocol notes](docs/live-protocol.md) describe the wire format, and there are small clients for [Swift](swift/README.md) and [Kotlin](kotlin/README.md). In JavaScript, pass `headers` to `createBwfLive`.
+
 [`bwf/demo`](bwf/demo/README.md) is a full bwf app. Run `npm run demo` there to try each part against a real dev server. It needs Node.js 24.22 or newer.
 
 ## Install
@@ -50,6 +52,9 @@ npm run check
 | --- | --- |
 | `typescript/` | The packages, examples and tests |
 | `bwf/` | A demo bwf app and test code for the adapter |
+| `docs/` | The live stream's wire protocol, for native clients |
+| `swift/` | A Swift client for bwf live streams |
+| `kotlin/` | A Kotlin client for bwf live streams |
 
 ## License
 

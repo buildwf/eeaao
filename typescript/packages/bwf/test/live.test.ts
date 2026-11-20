@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { defineData, defineSchema, table } from '@builtbyfriends/realtime-data';
 import { createLive } from '@builtbyfriends/realtime-live';
 import { publishTopics, topicPolicy } from '../src/data.js';
-import { bwfTransport, type ConnectLiveStream } from '../src/live.js';
+import { bwfTransport, fetchEventSource, type ConnectLiveStream } from '../src/live.js';
 import { memoryStorage } from '../../data/test/storage.js';
 
 /** A stand-in for bwf's live stream: topic pub/sub, plus EventSource opens it can trigger. */
@@ -75,6 +75,53 @@ describe('bwfTransport', () => {
     expect(reconnected).not.toHaveBeenCalled();
     v.sources()[0].dispatch('open'); // the stream dropped and bwf's client opened it again
     expect(reconnected).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('bwfTransport with headers', () => {
+  it('opens the stream through a fetch based source that sends the headers, and skips cookies', async () => {
+    const connect = vi.fn<ConnectLiveStream>(() => ({ subscribe: async () => async () => {}, close: () => {} }));
+    const headers = () => ({ authorization: 'Bearer t1' });
+    const t = bwfTransport({ connect, headers });
+    await t.subscribe('x', () => {});
+    const options = connect.mock.calls[0]![1]!;
+    expect(options.headers).toBe(headers);
+    expect(options.withCredentials).toBe(false);
+    expect(options.eventSource).toBeDefined();
+  });
+});
+
+describe('fetchEventSource', () => {
+  const sse = (text: string) => {
+    const stream = new ReadableStream<Uint8Array>({
+      start(c) {
+        c.enqueue(new TextEncoder().encode(text));
+        c.close();
+      },
+    });
+    return new Response(stream, { headers: { 'content-type': 'text/event-stream' } });
+  };
+
+  it('sends headers, then emits open, message frames and a final error when the stream ends', async () => {
+    const fetchMock = vi.fn(async () => sse(': connected\n\nevent: message\ndata: {"topic":"a"}\n\ndata: x\r\ndata: y\r\n\n'));
+    const Source = fetchEventSource({ headers: async () => ({ authorization: 'Bearer t' }), fetch: fetchMock as any });
+    const seen: string[] = [];
+    const source = new Source('/live?connectionId=c');
+    for (const type of ['open', 'message', 'error']) source.addEventListener(type, (e: any) => seen.push(e.data ? `${type}:${e.data}` : type));
+    await vi.waitFor(() => expect(seen).toContain('error'));
+    expect(seen).toEqual(['open', 'message:{"topic":"a"}', 'message:x\ny', 'error']);
+    const [url, init] = fetchMock.mock.calls[0] as any;
+    expect(url).toBe('/live?connectionId=c');
+    expect(new Headers(init.headers).get('authorization')).toBe('Bearer t');
+    expect(new Headers(init.headers).get('accept')).toBe('text/event-stream');
+  });
+
+  it('reports an error for a refused stream', async () => {
+    const Source = fetchEventSource({ headers: {}, fetch: (async () => new Response('no', { status: 401 })) as any });
+    const source = new Source('/live');
+    const error = vi.fn();
+    source.addEventListener('error', error);
+    await vi.waitFor(() => expect(error).toHaveBeenCalledTimes(1));
   });
 });
 

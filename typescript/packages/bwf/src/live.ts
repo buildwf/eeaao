@@ -1,4 +1,6 @@
 import type { LiveTransport } from '@builtbyfriends/realtime-live';
+export { fetchEventSource, type FetchEventSourceConstructor, type FetchEventSourceOptions } from './fetch-event-source.js';
+import { fetchEventSource } from './fetch-event-source.js';
 
 /** The part of bwf's `@builtbyfriends/bwf/live/client` this adapter uses. Pass `connectLiveStream` itself. */
 export type ConnectLiveStream = (
@@ -7,6 +9,8 @@ export type ConnectLiveStream = (
     withCredentials?: boolean;
     keepOpen?: boolean;
     retryDelay?: number;
+    headers?: HeadersInit | (() => HeadersInit | Promise<HeadersInit>);
+    fetch?: typeof fetch;
     eventSource?: new (url: string, init?: { withCredentials?: boolean }) => any;
     onError?: (error: any) => void;
   },
@@ -23,6 +27,15 @@ export type BwfTransportOptions = {
   /** Default true, so the session cookie rides along. */
   withCredentials?: boolean;
   retryDelay?: number;
+  /**
+   * Headers for the stream and for its subscribe requests, for apps that sign in with a bearer
+   * token (`{ authorization: 'Bearer …' }`) instead of a cookie. Pass a function to read a fresh
+   * token each time. Setting this swaps the browser's `EventSource`, which can't send headers,
+   * for a `fetch` based one, and turns off `withCredentials` unless you set it.
+   */
+  headers?: HeadersInit | (() => HeadersInit | Promise<HeadersInit>);
+  /** The `fetch` to use with `headers`. Defaults to the global one. */
+  fetch?: typeof fetch;
   onError?: (error: unknown) => void;
 };
 
@@ -40,7 +53,9 @@ export function bwfTransport(options: BwfTransportOptions): LiveTransport {
 
   function open() {
     if (stream) return stream;
-    const Native = (globalThis as any).EventSource as new (url: string, init?: { withCredentials?: boolean }) => any;
+    const Native = (options.headers
+      ? fetchEventSource({ headers: options.headers, fetch: options.fetch })
+      : (globalThis as any).EventSource) as new (url: string, init?: { withCredentials?: boolean }) => any;
     if (!Native) throw new Error('EventSource is not available here; live queries need a browser (or a polyfill)');
     // bwf opens a fresh EventSource for each reconnect, so count `open` events across all of them.
     class Watching extends Native {
@@ -52,7 +67,9 @@ export function bwfTransport(options: BwfTransportOptions): LiveTransport {
       }
     }
     stream = options.connect(options.url ?? '/live', {
-      withCredentials: options.withCredentials ?? true,
+      withCredentials: options.withCredentials ?? !options.headers,
+      headers: options.headers,
+      fetch: options.fetch,
       keepOpen: true,
       retryDelay: options.retryDelay,
       eventSource: Watching,
