@@ -2,11 +2,17 @@
 
 A small client for a bwf live stream, for iOS and macOS apps that sign in with a bearer token. A browser's `EventSource` can't send an `Authorization` header, and neither can an app that has no cookie session. This client does the same job as `connectLiveStream` over `URLSession`.
 
-The [protocol notes](../docs/live-protocol.md) describe what goes over the wire. This package is about 300 lines with no dependencies, so you can also copy it into your app.
+The [protocol notes](../docs/live-protocol.md) describe what goes over the wire. This package is about 300 lines with no dependencies, so you could also copy it into your app.
 
 ## Add it
 
-SwiftPM reads `Package.swift` from the root of a repository, and this one lives in `swift/`. Add the folder as a local package, with `.package(path: "../realtime/swift")`, or copy `Sources/RealtimeLive` into your app.
+In Xcode, choose File > Add Package Dependencies and enter `https://github.com/builtbyfriends/realtime`. In a `Package.swift`:
+
+```swift
+.package(url: "https://github.com/builtbyfriends/realtime", from: "0.1.0")
+// and, in the target:
+.product(name: "RealtimeLive", package: "realtime")
+```
 
 ## Use it
 
