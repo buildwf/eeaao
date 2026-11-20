@@ -50,6 +50,10 @@ describe('cli', () => {
     expect(JSON.parse((await cli('contacts', 'search', '--query', 'x', '--no-exact')).out).input.exact).toBe(false);
     expect((await cli('contacts', 'search', '--query', 'x', '--limit', 'many')).err).toContain('--limit must be an integer');
     expect((await cli('contacts', 'search', '--query', 'x', '--sort', 'size')).err).toContain('--sort must be one of: name, id');
+    expect(JSON.parse((await cli('contacts', 'search', '--query', 'x', '--exact', 'false')).out).input.exact).toBe(false);
+    expect(JSON.parse((await cli('contacts', 'search', '--query', 'x', '--exact=false')).out).input.exact).toBe(false);
+    expect((await cli('contacts', 'search', '--query', 'x', '--exact=maybe')).err).toContain('--exact takes true or false');
+    expect(JSON.parse((await cli('--query', 'x', 'contacts', 'search', '--limit=-1')).out).input).toEqual({ query: 'x', limit: -1 });
   });
 
   it('explains usage errors with exit code 2', async () => {
