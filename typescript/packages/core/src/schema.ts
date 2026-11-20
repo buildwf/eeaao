@@ -1,15 +1,11 @@
 import type { StandardJSONSchemaV1, StandardSchemaV1 } from '@standard-schema/spec';
 
-export type { StandardJSONSchemaV1, StandardSchemaV1 };
-
 /** Any Standard Schema (Zod, Valibot, ArkType, ...). */
 export type AnySchema = StandardSchemaV1<any, any>;
 export type InferIn<S> = S extends StandardSchemaV1<infer I, any> ? I : never;
 export type InferOut<S> = S extends StandardSchemaV1<any, infer O> ? O : never;
 
 export type JsonSchema = Record<string, unknown>;
-
-export type Issue = { message: string; path?: ReadonlyArray<PropertyKey | { key: PropertyKey }> };
 
 export async function validate(
   schema: AnySchema,

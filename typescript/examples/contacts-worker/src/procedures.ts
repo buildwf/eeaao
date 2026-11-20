@@ -22,7 +22,7 @@ const session = anyOf('session-or-token', apiToken);
 // --- data (in memory for the example) -------------------------------------
 const Contact = z.object({ id: z.string(), orgId: z.string(), name: z.string(), email: z.email() });
 type Contact = z.infer<typeof Contact>;
-export const contacts = new Map<string, Contact>([
+const contacts = new Map<string, Contact>([
   ['c1', { id: 'c1', orgId: 'o1', name: 'Ada Lovelace', email: 'ada@example.com' }],
   ['c2', { id: 'c2', orgId: 'o1', name: 'Alan Turing', email: 'alan@example.com' }],
   ['c3', { id: 'c3', orgId: 'o2', name: 'Grace Hopper', email: 'grace@example.com' }],

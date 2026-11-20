@@ -77,8 +77,6 @@ function parseBody(text: string, contentType: string | null): unknown {
   }
 }
 
-export type Devtools = ReturnType<typeof createDevtools>;
-
 export function createDevtools(registry: Registry, app: { name: string; basePath: string; mcpRoute: string }) {
   const route = '/__realtime';
   const exchanges: Exchange[] = [];
@@ -120,7 +118,7 @@ export function createDevtools(registry: Registry, app: { name: string; basePath
   globalThis.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
     const request = new Request(input, init);
     const url = new URL(request.url);
-    const llm = request.method === 'POST' && /\/v1\/messages$/.test(url.pathname);
+    const llm = request.method === 'POST' && url.pathname.endsWith('/v1/messages');
     const ex = add({
       at: Date.now(),
       kind: llm ? 'llm' : 'outbound',

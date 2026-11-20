@@ -1,5 +1,5 @@
 import { bindable, fieldSql, hash, ident, run, type DataStorage } from './storage.js';
-import type { Doc, DocOf, NewDoc, Schema, TableDef } from './schema.js';
+import type { Doc, NewDoc, Schema, TableDef } from './schema.js';
 
 const SYSTEM = new Set(['_id', '_creationTime']);
 
@@ -277,8 +277,8 @@ export class Query<S extends Schema, T extends keyof S & string> {
 
 // --------------------------------------------------------------------------- schema sync
 
-export const ftsTable = (table: string, index: string) => `fts_${ident(table, 'table')}_${ident(index, 'index')}`;
-export const vecTable = (table: string, index: string) => `vec_${ident(table, 'table')}_${ident(index, 'index')}`;
+const ftsTable = (table: string, index: string) => `fts_${ident(table, 'table')}_${ident(index, 'index')}`;
+const vecTable = (table: string, index: string) => `vec_${ident(table, 'table')}_${ident(index, 'index')}`;
 
 /**
  * Makes the database match the schema: tables, indexes, FTS5 and vector tables. Safe to
@@ -408,5 +408,3 @@ function cosine(a: readonly number[], b: Float32Array): number {
   }
   return na && nb ? dot / Math.sqrt(na * nb) : 0;
 }
-
-export type { DocOf };

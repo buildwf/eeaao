@@ -1,0 +1,13 @@
+{
+  // `npx oxlint`, run in turn with `npx knip` until both are empty.
+  "ignorePatterns": ["**/dist/**"],
+  "rules": {
+    "no-unused-vars": ["warn", { "argsIgnorePattern": "^_", "varsIgnorePattern": "^_", "ignoreRestSiblings": true }],
+    // The type tests read properties only to check their types.
+    "no-unused-expressions": "off",
+    // Copying listeners before calling them lets a listener unsubscribe while the loop runs.
+    "unicorn/no-useless-spread": "off",
+    // middleware.ts points at the virtual module's types, which have no module to import.
+    "typescript/triple-slash-reference": "off"
+  }
+}

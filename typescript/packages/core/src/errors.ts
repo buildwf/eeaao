@@ -10,7 +10,6 @@ export const BUILTIN_ERRORS = {
 export type BuiltinErrorCode = keyof typeof BUILTIN_ERRORS;
 
 export type ErrorSpec = { status: number; message: string };
-export type ErrorMap = Record<string, ErrorSpec>;
 
 /** Thrown by `fail()`. The pipeline turns it into the declared status and message. */
 export class ProcedureError extends Error {
