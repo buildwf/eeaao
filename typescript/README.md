@@ -209,7 +209,10 @@ export class Deployment extends data.durableObject(DurableObject) {}   // bind i
 ```
 
 Every write reports the topics it touched (`table`, `table:id`, plus the table's `topics`).
-`onCommit` publishes them. Jobs are at least once: a job that throws is retried with
+`onCommit` publishes them. The write answers without waiting for the publish, so a slow
+listener doesn't slow the write down. No client can subscribe to `table` or `table:id` unless
+a rule allows it, so `publishTopics(live, { only: policy.subscribable })` skips those, where
+`policy` is your `topicPolicy(...)`. That saves a Durable Object per topic. Jobs are at least once: a job that throws is retried with
 backoff and then parked as `failed`; give a job a stable `id` to replace a pending one or
 `scheduler.cancel(id)` it. Search and vector indexes rebuild from the documents when their
 definition changes. Vector search is exact (cosine over the filtered rows).
