@@ -139,6 +139,26 @@ describe('topicPolicy', () => {
     expect((await policy(ctx('secrets')))?.status).toBe(403);
     expect((await policy(ctx('xmessages:channel:a', 'member-of-a')))?.status).toBe(403);
   });
+
+  it('says which topics a client could ever subscribe to', () => {
+    expect(policy.subscribable('public')).toBe(true);
+    expect(policy.subscribable('messages:channel:a')).toBe(true);
+    expect(policy.subscribable('messages')).toBe(false);
+    expect(policy.subscribable('messages:9f1c')).toBe(false);
+    expect(policy.subscribable('xmessages:channel:a')).toBe(false);
+  });
+});
+
+describe('publishTopics', () => {
+  it('publishes only the topics `only` lets through, and nothing when none are left', async () => {
+    const published: string[] = [];
+    const withEnv = vi.fn(() => ({ publish: async (topic: string) => void published.push(topic) }));
+    const onCommit = publishTopics({ withEnv }, { only: (t) => t.startsWith('messages:channel:') });
+    await onCommit(['messages', 'messages:1', 'messages:channel:a'], {});
+    expect(published).toEqual(['messages:channel:a']);
+    await onCommit(['messages', 'messages:2'], {});
+    expect(withEnv).toHaveBeenCalledTimes(1);
+  });
 });
 
 describe('data layer to live query, end to end', () => {

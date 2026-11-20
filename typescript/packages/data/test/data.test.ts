@@ -171,10 +171,21 @@ describe('live topics', () => {
     expect(onCommit).toHaveBeenCalledTimes(1);
   });
 
+  it('answers a mutation without waiting for the publish to finish', async () => {
+    let finish!: () => void;
+    const pending = new Promise<void>((resolve) => (finish = resolve));
+    const onCommit = vi.fn(() => pending);
+    const { call } = setup({ onCommit });
+    await expect(call.m('send', { channel: 'general', body: 'hi' })).resolves.toBeTypeOf('string');
+    await vi.waitFor(() => expect(onCommit).toHaveBeenCalledTimes(1));
+    finish();
+  });
+
   it('does not fail a mutation when publishing throws', async () => {
     const { call } = setup({ onCommit: () => { throw new Error('down'); } });
     const err = vi.spyOn(console, 'error').mockImplementation(() => {});
     await expect(call.m('send', { channel: 'a', body: 'x' })).resolves.toBeTypeOf('string');
+    await vi.waitFor(() => expect(err).toHaveBeenCalledWith('onCommit failed', expect.any(Error)));
     err.mockRestore();
   });
 });

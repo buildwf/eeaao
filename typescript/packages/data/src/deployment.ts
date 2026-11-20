@@ -53,8 +53,11 @@ export type DataDefinition<S extends Schema, F extends Record<string, AnyFn>, J 
   jobs?: (job: <A = void>(run: JobFn<F, A>, options?: JobOptions) => JobFn<F, A>) => J;
   /**
    * Called after a mutation commits, with the topics it touched (`table`, `table:id`, plus
-   * table `topics`). Publish them to your live transport here. Errors are logged, never
-   * thrown: live delivery is at most once, so clients refetch on reconnect anyway.
+   * table `topics`). Publish them to your live transport here. The mutation answers without
+   * waiting for it: publishing can mean a round trip per topic and per listener, and the
+   * caller shouldn't wait on the slowest one. A Durable Object keeps running the work after it
+   * answers. Errors are logged, never thrown: live delivery is at most once, so clients
+   * refetch on reconnect anyway.
    */
   onCommit?: (topics: string[], env: any) => void | Promise<void>;
   /** Attempts per job before it is parked as failed. Default 5. */
@@ -239,11 +242,11 @@ export class Engine {
   private async afterCommit(touched: Set<string>, queueChanged: boolean): Promise<void> {
     if (queueChanged) await this.arm(this.scheduler());
     if (touched.size && this.def.onCommit) {
-      try {
-        await this.def.onCommit([...touched], this.env);
-      } catch (e) {
-        console.error('onCommit failed', e);
-      }
+      const onCommit = this.def.onCommit;
+      // Started, not awaited: see `onCommit` in DataDefinition.
+      void Promise.resolve()
+        .then(() => onCommit([...touched], this.env))
+        .catch((e) => console.error('onCommit failed', e));
     }
   }
 
