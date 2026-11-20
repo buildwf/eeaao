@@ -15,8 +15,8 @@ export type { ConnectLiveStream } from './live.js';
  *     topics: { 'messages.list': (i) => [`messages:channel:${i.channel}`] },
  *   });
  */
-export function createBwfLive<R extends Typed>(options: Omit<LiveOptions<R>, 'transport'> & Pick<BwfTransportOptions, 'connect' | 'url' | 'withCredentials' | 'retryDelay' | 'onError'>) {
-  const { connect, url, withCredentials, retryDelay, onError, ...rest } = options;
-  const live = createLive<R>({ ...rest, transport: bwfTransport({ connect, url, withCredentials, retryDelay, onError }) });
+export function createBwfLive<R extends Typed>(options: Omit<LiveOptions<R>, 'transport'> & Pick<BwfTransportOptions, 'connect' | 'url' | 'withCredentials' | 'retryDelay' | 'headers' | 'fetch' | 'onError'>) {
+  const { connect, url, withCredentials, retryDelay, headers, fetch, onError, ...rest } = options;
+  const live = createLive<R>({ ...rest, transport: bwfTransport({ connect, url, withCredentials, retryDelay, headers, fetch, onError }) });
   return { live, ...createLiveHooks<R>(live) };
 }
