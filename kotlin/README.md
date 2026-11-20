@@ -2,9 +2,21 @@
 
 A small client for a bwf live stream, for Android and JVM apps that sign in with a bearer token. A browser's `EventSource` can't send an `Authorization` header, and neither can an app that has no cookie session. This client does the same job as `connectLiveStream` over OkHttp.
 
-The [protocol notes](../docs/live-protocol.md) describe what goes over the wire. This module is two files with OkHttp, coroutines and kotlinx.serialization as its only dependencies, so you can also copy `Protocol.kt` and `LiveClient.kt` into your app.
+The [protocol notes](../docs/live-protocol.md) describe what goes over the wire. This module is two files with OkHttp, coroutines and kotlinx.serialization as its only dependencies, so you could also copy `Protocol.kt` and `LiveClient.kt` into your app.
 
 It's a plain JVM library, so it works in an Android app as it is. `gradle test` runs its tests against a fake server.
+
+## Add it
+
+The client is published by [JitPack](https://jitpack.io), which builds a tag of this repository on demand.
+
+```kotlin
+// settings.gradle.kts
+dependencyResolutionManagement { repositories { maven("https://jitpack.io") } }
+
+// build.gradle.kts
+implementation("com.github.builtbyfriends.realtime:realtime-live:0.1.0")
+```
 
 ## Use it
 

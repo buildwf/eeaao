@@ -1,8 +1,8 @@
 plugins {
+    `maven-publish`
     kotlin("jvm") version "2.0.21"
     kotlin("plugin.serialization") version "2.0.21"
 }
-
 
 dependencies {
     api("com.squareup.okhttp3:okhttp:4.12.0")
@@ -15,3 +15,14 @@ dependencies {
 }
 
 tasks.test { useJUnit() }
+
+java { withSourcesJar() }
+
+publishing {
+    publications {
+        create<MavenPublication>("release") {
+            from(components["java"])
+            artifactId = "realtime-live"
+        }
+    }
+}
