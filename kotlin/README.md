@@ -15,7 +15,7 @@ The client is published by [JitPack](https://jitpack.io), which builds a tag of 
 dependencyResolutionManagement { repositories { maven("https://jitpack.io") } }
 
 // build.gradle.kts
-implementation("com.github.builtbyfriends.realtime:realtime-live:0.1.0")
+implementation("com.github.builtbyfriends:realtime:<tag or commit>")
 ```
 
 ## Use it
