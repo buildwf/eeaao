@@ -12,7 +12,7 @@
     "@builtbyfriends/realtime": "0.1.1",
     "@builtbyfriends/realtime-http": "0.1.1",
     "@builtbyfriends/realtime-mcp": "0.1.1",
-    "agents": "0.33.0",
+    "agents": "0.34.0",
     "@modelcontextprotocol/server": "2.4.0",
     "zod": "4.6.7"
   }
