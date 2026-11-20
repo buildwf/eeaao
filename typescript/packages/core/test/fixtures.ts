@@ -11,7 +11,8 @@ export const env: Env = {
   },
 };
 
-export const { procedure, profile } = createProcedures<Env>();
+const { procedure, profile } = createProcedures<Env>();
+export { procedure };
 export const token = bearerAuth<User, Env>({ name: 'api-token', verify: (t, e) => e.tokens[t] ?? null, actorId: (u) => u.id });
 
 export const req = (token?: string) =>

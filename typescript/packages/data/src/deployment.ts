@@ -8,8 +8,8 @@ import type { DataStorage } from './storage.js';
 export type QueryCtx<S extends Schema> = { db: DbReader<S>; env: any; now: number };
 export type MutationCtx<S extends Schema> = { db: Db<S>; scheduler: Scheduler; env: any; now: number };
 
-export type QueryFn<A = any, R = any> = { readonly kind: 'query'; readonly run: (ctx: QueryCtx<any>, args: A) => R };
-export type MutationFn<A = any, R = any> = { readonly kind: 'mutation'; readonly run: (ctx: MutationCtx<any>, args: A) => R };
+type QueryFn<A = any, R = any> = { readonly kind: 'query'; readonly run: (ctx: QueryCtx<any>, args: A) => R };
+type MutationFn<A = any, R = any> = { readonly kind: 'mutation'; readonly run: (ctx: MutationCtx<any>, args: A) => R };
 export type AnyFn = QueryFn | MutationFn;
 
 /** Handed to the `functions` builder. Functions are synchronous: SQLite in a Durable Object is. */
@@ -69,7 +69,7 @@ export type DataDefinition<S extends Schema, F extends Record<string, AnyFn>, J 
 type Stub = { run(kind: string, name: string, args: unknown): Promise<any>; job(id: string): Promise<ScheduledJob | null> };
 type Namespace = { idFromName(name: string): unknown; get(id: any): any };
 
-export type Data<S extends Schema, F extends Record<string, AnyFn>, J extends Record<string, JobFn<F>>> = {
+export type Data<S extends Schema, F extends Record<string, AnyFn>, _J extends Record<string, JobFn<F>>> = {
   readonly schema: S;
   readonly functions: F;
   /**

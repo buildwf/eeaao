@@ -22,7 +22,7 @@ function fakeHost() {
         return async () => void subs.get(topic)!.delete(id);
       },
       close: () => {},
-      ...{ reconnect: open },
+      reconnect: open,
     } as any;
   };
   return {
