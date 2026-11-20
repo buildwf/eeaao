@@ -41,7 +41,8 @@
     "@builtbyfriends/realtime": "0.1.1",
     "@builtbyfriends/realtime-http": "0.1.1",
     "@builtbyfriends/realtime-live": "0.1.1",
-    "@builtbyfriends/realtime-mcp": "0.1.1"
+    "@builtbyfriends/realtime-mcp": "0.1.1",
+    "eventsource-parser": "^4.1.3"
   },
   "peerDependenciesMeta": {
     "@builtbyfriends/bwf": {

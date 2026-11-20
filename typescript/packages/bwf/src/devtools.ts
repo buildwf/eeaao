@@ -3,6 +3,7 @@
 // outbound fetch the Worker makes (including model API calls), and the step-by-step
 // trace of each procedure call. The middleware only loads this under `vite dev`, so
 // production builds leave it out entirely.
+import { createParser } from 'eventsource-parser';
 import type { CallTrace, Registry, ToolGateTrace, TraceEvent } from '@builtbyfriends/realtime';
 // The page itself (devtools.html), inlined by the realtime() plugin as a string.
 import page from 'virtual:realtime/devtools-page';
@@ -55,19 +56,17 @@ function parseBody(text: string, contentType: string | null): unknown {
   if (!text) return undefined;
   if (contentType?.includes('text/event-stream')) {
     const events: unknown[] = [];
-    for (const block of text.split(/\n\n+/)) {
-      const data = block
-        .split('\n')
-        .filter((l) => l.startsWith('data:'))
-        .map((l) => l.slice(5).trimStart())
-        .join('\n');
-      if (!data) continue;
-      try {
-        events.push(JSON.parse(data));
-      } catch {
-        events.push(data);
-      }
-    }
+    const parser = createParser({
+      onEvent: ({ data }) => {
+        try {
+          events.push(JSON.parse(data));
+        } catch {
+          events.push(data);
+        }
+      },
+    });
+    // A recorded body can stop before the blank line that ends its last event.
+    parser.feed(`${text}\n\n`);
     return { sse: events };
   }
   try {

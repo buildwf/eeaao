@@ -1,3 +1,5 @@
+import { EventSourceParserStream } from 'eventsource-parser/stream';
+
 /**
  * An `EventSource` that can send headers, built on `fetch`.
  *
@@ -59,30 +61,14 @@ export function fetchEventSource(options: FetchEventSourceOptions): FetchEventSo
         const response = await (options.fetch ?? fetch)(this.url, { headers, signal: this.#abort.signal, cache: 'no-store' });
         if (!response.ok || !response.body) throw new Error(`live: stream answered ${response.status}`);
         this.#emit('open');
-        const reader = response.body.pipeThrough(new TextDecoderStream()).getReader();
-        let buffer = '';
-        let data: string[] = [];
-        let name = '';
+        const reader = response.body
+          .pipeThrough(new TextDecoderStream())
+          .pipeThrough(new EventSourceParserStream())
+          .getReader();
         for (;;) {
           const { value, done } = await reader.read();
           if (done) break;
-          buffer += value;
-          let newline: number;
-          while ((newline = buffer.search(/\r\n|\n|\r/)) !== -1) {
-            const line = buffer.slice(0, newline);
-            buffer = buffer.slice(newline + (buffer.startsWith('\r\n', newline) ? 2 : 1));
-            if (line === '') {
-              if (data.length > 0) this.#emit(name || 'message', { data: data.join('\n') });
-              data = [];
-              name = '';
-            } else if (!line.startsWith(':')) {
-              const colon = line.indexOf(':');
-              const field = colon === -1 ? line : line.slice(0, colon);
-              const text = colon === -1 ? '' : line.slice(colon + 1).replace(/^ /, '');
-              if (field === 'data') data.push(text);
-              else if (field === 'event') name = text;
-            }
-          }
+          this.#emit(value.event || 'message', { data: value.data });
         }
         this.#emit('error'); // the server ended the stream
       } catch (error) {
