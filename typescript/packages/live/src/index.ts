@@ -196,7 +196,31 @@ export function createLive<R extends Typed = Registry<any>>(options: LiveOptions
     return Promise.all([...entries.values()].filter((e) => e.listeners.size).map((e) => fetchNow(e)));
   }
 
-  return { query, mutate, refetchAll };
+  /**
+   * Changes the cached answers of a procedure in place, without a fetch, for a device that hears the changed records
+   * themselves (a sync socket). `fn` gets each answer that's ready with its input, and returns the new answer, or
+   * undefined to leave it be. Watchers see the new answer at once.
+   */
+  function update<N extends keyof Procs<R> & string>(
+    name: N,
+    fn: (data: OutputOf<Procs<R>[N]>, input: InputOf<Procs<R>[N]>) => OutputOf<Procs<R>[N]> | undefined,
+  ): void {
+    for (const e of entries.values()) {
+      if (e.name !== name || e.state.status !== 'ready') continue;
+      const next = fn(e.state.data, e.input as InputOf<Procs<R>[N]>);
+      if (next === undefined || next === e.state.data) continue;
+      // Decision: a fetch on its way may have read before this change, so fetch once more after it and it can't win.
+      if (e.inFlight) e.dirty = true;
+      set(e, { ...e.state, data: next });
+    }
+  }
+
+  /** Refetches the watched answers of a procedure whose input passes `match`. */
+  function refetch<N extends keyof Procs<R> & string>(name: N, match: (input: InputOf<Procs<R>[N]>) => boolean = () => true): Promise<void[]> {
+    return Promise.all([...entries.values()].filter((e) => e.name === name && e.listeners.size && match(e.input as InputOf<Procs<R>[N]>)).map((e) => fetchNow(e)));
+  }
+
+  return { query, mutate, refetchAll, update, refetch };
 }
 
 export type Live<R extends Typed = Registry<any>> = ReturnType<typeof createLive<R>>;

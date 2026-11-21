@@ -66,11 +66,11 @@ describe('pipeline', () => {
 
   it('sends analytics once per call that reached the handler, after the result', async () => {
     const { call, analytics } = setup();
-    await call('contacts.get', { orgId: 'o1', id: 'c1' }); // 401: no handler
-    await call('contacts.get', { orgId: 'o1', id: 'c1' }, 'eve'); // 403: no handler
+    await call('contacts.get', { orgId: 'o1', id: 'c1' });
+    await call('contacts.get', { orgId: 'o1', id: 'c1' }, 'eve');
     await call('contacts.get', { orgId: 'o1', id: 'c1' }, 'bob');
     await call('contacts.get', { orgId: 'o1', id: 'missing' }, 'bob');
-    await call('ping', undefined); // opted out
+    await call('ping', undefined);
     expect(analytics.events).toHaveLength(2);
     expect(analytics.events[0]).toMatchObject({
       event: 'contact.viewed',

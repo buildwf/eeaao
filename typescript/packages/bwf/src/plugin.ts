@@ -80,7 +80,7 @@ export function realtime(options: RealtimePluginOptions = {}): Plugin {
         `import { defineRegistry } from '@builtbyfriends/realtime';`,
         `import { analyticsEngine, fanOut } from '@builtbyfriends/realtime-analytics';`,
         ...files.map((f, i) => `import * as m${i} from ${JSON.stringify('/' + f)};`),
-        // Pick up unfinished builders too, so a procedure missing .handler() fails instead of vanishing.
+        // Decision: pick up unfinished builders too, so a procedure missing .handler() fails instead of vanishing.
         `const found = [${files.map((_, i) => `...Object.values(m${i})`).join(', ')}]`,
         `  .filter((v) => v && (v['~realtime'] === 'procedure' || v['~realtime'] === 'builder'));`,
         `const console_ = { name: 'console', track: (e) => console.log('[analytics]', JSON.stringify(e)) };`,
@@ -90,14 +90,13 @@ export function realtime(options: RealtimePluginOptions = {}): Plugin {
       ].join('\n');
     },
     configureServer(server: ViteDevServer) {
-      // Point people at the call visualizers next to Vite's own URLs.
       const printUrls = server.printUrls.bind(server);
       server.printUrls = () => {
         printUrls();
         const url = server.resolvedUrls?.local[0];
         if (url) server.config.logger.info(`  \x1b[32m➜\x1b[0m  \x1b[1mrealtime\x1b[0m:    \x1b[36m${url.replace(/\/$/, '')}/__realtime\x1b[0m  (network, MCP and AI chat visualizers)`);
       };
-      // A new or deleted procedure file changes the registry module itself.
+      // Decision: a new or deleted procedure file changes the registry module itself, so reload it.
       const reload = (file: string) => {
         if (!relative(root, file).startsWith(dir)) return;
         for (const env of Object.values(server.environments)) {
@@ -105,7 +104,6 @@ export function realtime(options: RealtimePluginOptions = {}): Plugin {
           if (mod) env.moduleGraph.invalidateModule(mod);
         }
       };
-      // Editing the devtools page itself (when working on realtime) reloads it.
       const pagePath = fileURLToPath(new URL('./devtools.html', import.meta.url));
       server.watcher.add(pagePath);
       server.watcher.on('change', (file) => {

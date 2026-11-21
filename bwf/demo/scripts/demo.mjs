@@ -1,7 +1,3 @@
-// Walks through every surface of the demo app against a real bwf dev server:
-// HTTP (every status), OpenAPI and manifest, MCP, the CLI, AI tools, analytics, audit.
-// Usage: npm run demo            (resets the local D1 database, starts `vite dev`)
-//        BASE=http://localhost:5173 npm run demo   (use a dev server you started)
 import { execFileSync, spawn } from 'node:child_process';
 import { existsSync, writeFileSync } from 'node:fs';
 import { Client, StreamableHTTPClientTransport } from '@modelcontextprotocol/client';

@@ -16,3 +16,7 @@ This is about tone in writing. It doesn't loosen the working constraints in this
 ## Keep the code app-neutral
 
 This repository takes an app as input and doesn't know which app it is. Code, tests, docs and manifests don't name a specific app. `typescript/packages/core/test/product-names.test.ts` checks this and fails when a tracked file contains a name from its list.
+
+## Comments
+
+Code comments tend to repeat the code, go stale, or excuse a shortcut, so the `realtime/no-comments` oxlint rule (`lint/comments.mjs`, `bun run lint` in `typescript/`) bans them. It allows a decision record that starts with `Decision:`, tool directives such as `@ts-expect-error <why>`, and JSDoc on the published API in `typescript/packages/*/src`. `/delete-comment` (`.claude/skills/delete-comment`) walks through an audit.

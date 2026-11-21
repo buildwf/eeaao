@@ -1,4 +1,5 @@
 import type { AnySchema } from '@builtbyfriends/realtime';
+import type { SyncDef } from './changes.js';
 
 export type TableDef<D = any> = {
   /** Optional Standard Schema (zod, valibot, arktype) checked on every insert and replace. */
@@ -11,6 +12,8 @@ export type TableDef<D = any> = {
   vectors?: Record<string, { field: string; dimensions: number; filters?: readonly string[] }>;
   /** Extra live topics to publish when a document of this table changes (called with old and new). */
   topics?: (doc: D) => string[];
+  /** Sends this table's documents to devices: the group each is in and the fields they see. See `pull`. */
+  sync?: SyncDef<D & { _id: string; _creationTime: number }>;
   /** Phantom type of the document. */
   readonly '~doc'?: D;
 };

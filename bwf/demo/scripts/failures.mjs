@@ -1,5 +1,4 @@
-// Shows every way realtime stops an incomplete procedure, with the real messages.
-// Each case runs in a scratch copy of this app next to it, so the demo itself is untouched.
+// Decision: each case runs in a scratch copy of this app next to it, so the demo itself stays untouched.
 import { execFileSync } from 'node:child_process';
 import { cpSync, existsSync, mkdirSync, readFileSync, rmSync, symlinkSync } from 'node:fs';
 import { join } from 'node:path';
@@ -23,7 +22,6 @@ function run(cmd, args) {
   }
 }
 const build = () => run('npx', ['vite', 'build', '--logLevel', 'error']);
-// The plugin's own message, without the bundler's stack trace.
 const realtimeMessage = (out) => {
   const lines = out.split('\n');
   const i = lines.findIndex((l) => l.includes('realtime found'));

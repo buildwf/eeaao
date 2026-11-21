@@ -2,8 +2,8 @@ import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
-// realtime is the core and knows nothing about bwf. Only `@builtbyfriends/realtime-bwf`, the adapter, may
-// import from the framework.
+// Decision: realtime is the core and knows nothing about bwf. Only `@builtbyfriends/realtime-bwf`,
+// the adapter, may import from the framework.
 const packages = ['core', 'http', 'mcp', 'ai', 'analytics', 'cli', 'data', 'live'];
 const bwfImport = /(?:from|import)\s*\(?\s*['"]@builtbyfriends\/bwf(?:\/[^'"]*)?['"]/;
 

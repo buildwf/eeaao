@@ -71,7 +71,7 @@ describe('live store', () => {
     await flush();
     t.reconnect();
     await flush();
-    expect(call).toHaveBeenCalledTimes(1); // first still in flight, second queued
+    expect(call).toHaveBeenCalledTimes(1);
     gates[0]!();
     await flush();
     expect(call).toHaveBeenCalledTimes(2);
@@ -152,5 +152,24 @@ describe('live store', () => {
     await expect(live.mutate('messages.send', { body: 'x' })).resolves.toMatchObject({ name: 'messages.send' });
     await live.refetchAll();
     expect(call).toHaveBeenCalledTimes(3);
+  });
+
+  it('update changes a ready answer in place, and refetch reaches only matching inputs', async () => {
+    const { call, live } = setup();
+    const a = live.query('messages.list', { channel: 'a' });
+    const b = live.query('messages.list', { channel: 'b' });
+    let heard = 0;
+    a.subscribe(() => void heard++);
+    b.subscribe(() => {});
+    await flush();
+    const before = call.mock.calls.length;
+    const seen = heard;
+    live.update('messages.list', (data: any, input: any) => (input.channel === 'a' ? { ...data, patched: true } : undefined));
+    expect(a.getSnapshot().data).toMatchObject({ patched: true });
+    expect(b.getSnapshot().data).not.toHaveProperty('patched');
+    expect(heard).toBe(seen + 1);
+    expect(call.mock.calls.length).toBe(before);
+    await live.refetch('messages.list', (i: any) => i.channel === 'b');
+    expect(call.mock.calls.length).toBe(before + 1);
   });
 });

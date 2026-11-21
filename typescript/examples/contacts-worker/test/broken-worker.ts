@@ -1,5 +1,5 @@
-// A Worker whose procedure skipped decisions behind `as any`. The type checker is
-// bypassed, so only the registry's load-time check can stop it.
+// Decision: this Worker skips decisions behind `as any` on purpose. The type checker is bypassed,
+// so only the registry's load-time check can stop it.
 import { z } from 'zod';
 import { defineRegistry, procedure } from '@builtbyfriends/realtime';
 

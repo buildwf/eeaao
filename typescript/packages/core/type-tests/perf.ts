@@ -1,4 +1,4 @@
-// Generated: 200 complete procedures, to keep editor and tsc time in check (about 0.5s with TS 7).
+// Decision: 200 complete procedures, to keep editor and tsc time in check (about 0.5s with TS 7).
 import { z } from 'zod';
 import { bearerAuth, createProcedures, defineRegistry } from '@builtbyfriends/realtime';
 const { procedure } = createProcedures<{ DB: string }>();

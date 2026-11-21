@@ -213,7 +213,7 @@ export function defineRegistry<const P extends readonly AnyProcedure[]>(
     }
     if (typeof p.handler !== 'function') problems.push(`${label}: handler is not a function`);
 
-    // Convert JSON Schema now, so a schema that cannot be expressed fails the deploy,
+    // Decision: convert JSON Schema now, so a schema that can't be expressed fails the deploy and
     // not the first tools/list call.
     const exposed = EXPOSED.some((c) => (d[c] as { kind?: string } | undefined)?.kind && (d[c] as any).kind !== 'none');
     const jsonSchema = { input: null as JsonSchema | null, output: null as JsonSchema | null };
@@ -274,7 +274,7 @@ export function defineRegistry<const P extends readonly AnyProcedure[]>(
     const result = await run(name, rawInput, exec, steps);
     const proc = loaded.get(name);
     if (proc) {
-      // Concerns the call never reached still show, so a trace always has every decision.
+      // Decision: concerns the call never reached still show, so a trace has each decision.
       const seen = new Set(steps.map((s) => s.concern));
       const surface = SURFACE_CONCERN[exec.surface];
       for (const c of TRACE_ORDER) if (!seen.has(c) && (c === 'handler' || !EXPOSED.includes(c) || c === surface)) steps.push({ concern: c, status: 'unreached', decision: c === 'handler' ? 'your code' : describe(c, proc.decisions[c]) });
@@ -290,23 +290,20 @@ export function defineRegistry<const P extends readonly AnyProcedure[]>(
     const d = proc.decisions;
     const info = (stage: string) => ({ procedure: name, surface: exec.surface, stage });
     const waitUntil = exec.waitUntil ?? ((p: Promise<unknown>) => void p.catch((e) => onError(e, info('waitUntil'))));
-    // Records one step of the trace. A no-op unless someone subscribed to registry.trace.
     let mark = Date.now();
     const step = (concern: TraceConcern, status: TraceStep['status'], detail?: string) => {
       if (!steps) return;
       const now = Date.now();
       const dec = concern === 'handler' ? null : d[concern];
       const off = !!dec && (dec as { kind: string }).kind === 'none' && status === 'pass';
-      // An opt-out's reason is already in the decision text, so it gets no separate detail.
+      // Decision: an opt-out's reason is already in the decision text, so it gets no separate detail.
       steps.push({ concern, status: off ? 'off' : status, decision: dec ? describe(concern as Concern, dec) : 'your code', ...(detail && !off ? { detail } : {}), ms: now - mark });
       mark = now;
     };
 
-    // 0. The surface the call came through, and the decision that exposed it there
     const surfaceConcern = SURFACE_CONCERN[exec.surface];
     if (surfaceConcern) step(surfaceConcern, 'pass', `called over ${exec.surface}`);
 
-    // 1. Authentication
     let ctx: unknown = null;
     if (d.authn.kind === 'auth') {
       try {
@@ -324,7 +321,6 @@ export function defineRegistry<const P extends readonly AnyProcedure[]>(
       step('authn', 'pass', actor ? `actor ${actor}` : 'signed in');
     } else step('authn', 'pass', d.authn.reason);
 
-    // 2. Input
     let input: unknown = undefined;
     if (d.input.kind === 'schema') {
       const r = await validate(d.input.schema, rawInput);
@@ -339,7 +335,7 @@ export function defineRegistry<const P extends readonly AnyProcedure[]>(
       return builtinFailure('INVALID_INPUT', [{ message: 'This procedure takes no input', path: '' }]);
     } else step('input', 'pass', 'no input');
 
-    // 3. Authorization (after input, so policies can check ownership)
+    // Decision: authorization runs after input, so policies can check ownership.
     if (d.authz.kind === 'policy') {
       let allowed = false;
       try {
@@ -356,7 +352,6 @@ export function defineRegistry<const P extends readonly AnyProcedure[]>(
       step('authz', 'pass', `policy ${d.authz.policy} allowed it`);
     } else step('authz', 'pass', d.authz.reason);
 
-    // 4. Handler
     const started = Date.now();
     let result: CallResult;
     try {
@@ -372,7 +367,7 @@ export function defineRegistry<const P extends readonly AnyProcedure[]>(
         },
       });
       step('handler', 'pass', 'returned');
-      // 5. Output: validated before it leaves, so clients and tools can trust the shape
+      // Decision: output is validated before it leaves, so clients and tools can trust its shape.
       const out = await validate(d.output.schema, value);
       if (out.ok) {
         result = { ok: true, status: 200, value: out.value };
@@ -402,7 +397,7 @@ export function defineRegistry<const P extends readonly AnyProcedure[]>(
       }
     }
 
-    // 6. Analytics, after the response is decided and never blocking it
+    // Decision: analytics runs after the response is decided and doesn't block it.
     if (d.analytics.kind === 'event' && options.analytics) {
       const spec = d.analytics;
       const provider = options.analytics;

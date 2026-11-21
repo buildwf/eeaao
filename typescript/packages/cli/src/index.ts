@@ -1,3 +1,4 @@
+import { parseArgs, type ParseArgsOptionsConfig } from 'node:util';
 import type { Manifest, ManifestEntry } from '@builtbyfriends/realtime';
 
 type Io = {
@@ -25,27 +26,38 @@ function typeOf(p: Prop): string {
 
 class UsageError extends Error {}
 
-function parseArgs(argv: string[]) {
+const globalOptions: ParseArgsOptionsConfig = {
+  url: { type: 'string' },
+  token: { type: 'string' },
+  json: { type: 'string' },
+  help: { type: 'boolean', short: 'h' },
+};
+
+function optionsFor(entry: ManifestEntry): ParseArgsOptionsConfig {
+  const props = (entry.input as { properties?: Record<string, Prop> } | undefined)?.properties ?? {};
+  const own = Object.entries(props).map(([k, p]) => [kebab(k), { type: typeOf(p) === 'boolean' ? 'boolean' : 'string' }]);
+  return { ...globalOptions, ...Object.fromEntries(own) };
+}
+
+// Decision: a flag parseArgs doesn't know takes the next word as its value, and so does a true/false
+// flag when that word is `true` or `false`, so `--org o1` reaches the unknown-flag message and
+// `--exact false` still works.
+function splitArgs(argv: string[], options: ParseArgsOptionsConfig) {
+  const { tokens } = parseArgs({ args: argv, options, strict: false, allowPositionals: true, tokens: true });
   const words: string[] = [];
   const flags: [string, string | true][] = [];
-  for (let i = 0; i < argv.length; i++) {
-    const a = argv[i]!;
-    if (a === '--') {
-      words.push(...argv.slice(i + 1));
-      break;
+  let open: { index: number; name: string } | undefined;
+  for (const t of tokens) {
+    if (t.kind === 'option') {
+      flags.push([t.name, t.value ?? true]);
+      open = t.value === undefined ? { index: t.index, name: t.name } : undefined;
+      continue;
     }
-    if (a === '-h') flags.push(['help', true]);
-    else if (a.startsWith('--')) {
-      const eq = a.indexOf('=');
-      if (eq > 0) flags.push([a.slice(2, eq), a.slice(eq + 1)]);
-      else {
-        const next = argv[i + 1];
-        if (next !== undefined && !next.startsWith('--')) {
-          flags.push([a.slice(2), next]);
-          i++;
-        } else flags.push([a.slice(2), true]);
-      }
-    } else words.push(a);
+    const type = open && options[open.name]?.type;
+    if (t.kind === 'positional' && open?.index === t.index - 1 && (!type || (type === 'boolean' && /^(true|false)$/.test(t.value)))) {
+      flags[flags.length - 1]![1] = t.value;
+    } else if (t.kind === 'positional') words.push(t.value);
+    open = undefined;
   }
   return { words, flags };
 }
@@ -148,13 +160,10 @@ function listHelp(manifest: Manifest): string {
  */
 export async function run(io: Io): Promise<number> {
   const f = io.fetch ?? fetch;
-  const { words, flags } = parseArgs(io.argv);
-  const take = (name: string) => {
-    const i = flags.findIndex(([k]) => k === name);
-    if (i < 0) return undefined;
-    const [, v] = flags.splice(i, 1)[0]!;
-    return v;
-  };
+  // Decision: a first pass for the global flags and the command words. The command's own flags are
+  // only known once the manifest is in, so they're split again below.
+  const { words, flags } = splitArgs(io.argv, globalOptions);
+  const take = (name: string) => flags.find(([k]) => k === name)?.[1];
   const url = (take('url') as string | undefined) ?? io.env.REALTIME_URL;
   const token = (take('token') as string | undefined) ?? io.env.REALTIME_TOKEN;
   const basePath = io.env.REALTIME_BASE_PATH ?? '/rpc';
@@ -188,7 +197,8 @@ export async function run(io: Io): Promise<number> {
     (words.length && !help ? io.stderr : io.stdout)(listHelp(manifest));
     return words.length && !help ? 2 : 0;
   }
-  const extra = words.slice(entry.cli!.command.split(' ').length);
+  const own = splitArgs(io.argv, optionsFor(entry));
+  const extra = own.words.slice(entry.cli!.command.split(' ').length);
   if (help) {
     io.stdout(commandHelp(entry));
     return 0;
@@ -200,7 +210,7 @@ export async function run(io: Io): Promise<number> {
 
   let input: unknown;
   try {
-    input = inputFromFlags(entry, flags);
+    input = inputFromFlags(entry, own.flags.filter(([k]) => !['url', 'token', 'help'].includes(k)));
   } catch (e) {
     if (!(e instanceof UsageError)) throw e;
     io.stderr(`realtime: ${e.message}\n\n${commandHelp(entry)}`);
