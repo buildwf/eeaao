@@ -1,4 +1,3 @@
-// Bundles the realtime CLI (packages/cli) into .cli/realtime.mjs. Published, this is `npx realtime`.
 import { build } from 'vite';
 const src = new URL('../../../typescript/packages/', import.meta.url).pathname;
 await build({

@@ -1,10 +1,6 @@
 import { z } from 'zod';
 import { procedure } from '@builtbyfriends/realtime-bwf';
 
-/**
- * A webhook: no user, so no auth, but it is still a procedure with a validated input,
- * output and analytics. HTTP only. (A real one would check the provider's signature.)
- */
 export const paymentReceived = procedure('billing.paymentReceived')
   .noAuth({ reason: 'Called by the payment provider, which has no user token' })
   .noAuthz({ reason: 'No user; the payload is checked against the provider instead' })

@@ -12,10 +12,8 @@ export type McpHandlerOptions = Omit<CreateMcpHandlerOptions, 'route'> & {
   route?: string;
 };
 
-/**
- * A schema the MCP SDK accepts that only carries JSON Schema. Validation stays in the
- * realtime pipeline, so MCP calls get the same 400s, auth and analytics as HTTP calls.
- */
+// Decision: the MCP SDK gets a schema that only carries JSON Schema. Validation stays in the realtime
+// pipeline, so MCP calls get the same 400s, auth and analytics as HTTP calls.
 const passthrough = (json: JsonSchema) => ({
   '~standard': {
     version: 1 as const,

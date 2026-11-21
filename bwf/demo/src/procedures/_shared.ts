@@ -1,4 +1,4 @@
-// Files starting with _ are not scanned for procedures: shared auth, profiles and schemas.
+// Decision: files that start with _ aren't scanned for procedures, so shared auth, profiles and schemas go here.
 import { z } from 'zod';
 import { apiTokens, profile } from '@builtbyfriends/realtime-bwf';
 import { db, eq } from '@builtbyfriends/bwf/db';
@@ -6,16 +6,14 @@ import { apiTokens as tokensTable } from '@schema';
 
 export type User = { id: string; orgId: string; role: 'admin' | 'member' };
 
-/** Bearer tokens from the api_tokens table (hashed). The CLI and MCP clients use these. */
 export const token = apiTokens<User>(async (hash) => {
   const row = await db.select().from(tokensTable).where(eq(tokensTable.hash, hash)).get();
   return row ? { id: row.userId, orgId: row.orgId, role: row.role } : null;
 });
 
-/** Signed in. Applying a profile is still an explicit choice and shows in the audit. */
+// Decision: a profile is still an explicit choice, so it shows in the audit.
 export const signedIn = profile('signed-in').auth(token);
 
-/** Signed in as an admin, and never on the CLI. Fills three decisions at once. */
 export const adminOnly = profile('admin-only')
   .auth(token)
   .authz({ policy: 'admin', check: (user) => user.role === 'admin' })

@@ -1,7 +1,5 @@
-// A scripted stand-in for the Anthropic Messages API, so the demo's in-app assistant
-// runs without an API key. It answers POST /v1/messages in the real response shape and
-// follows a fixed script based on the conversation so far. With ANTHROPIC_API_KEY set and
-// ANTHROPIC_BASE_URL left alone, the assistant talks to Claude instead.
+// Decision: a scripted stand-in for the Anthropic Messages API, so the demo's assistant runs without an
+// API key. Set ANTHROPIC_API_KEY and leave ANTHROPIC_BASE_URL alone to talk to Claude instead.
 import { createServer } from 'node:http';
 
 let n = 0;

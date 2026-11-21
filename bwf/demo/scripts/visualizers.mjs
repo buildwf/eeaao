@@ -1,9 +1,3 @@
-// Fills the /__realtime call visualizers with real traffic, then leaves the dev server
-// running so you can look around. Every surface is used: HTTP (each outcome), the CLI,
-// an MCP client, an agent calling /rpc/ai/run, and the in-app assistant chatting with a
-// scripted stand-in model (scripts/fake-model.mjs) that asks for an approval.
-// Usage: npm run visualize          (Ctrl-C to stop)
-//        npm run visualize -- --once (send the traffic, print the URL, exit)
 import { execFileSync, spawn } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import { Client, StreamableHTTPClientTransport } from '@modelcontextprotocol/client';

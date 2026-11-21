@@ -1,24 +1,22 @@
 import { execFileSync } from 'node:child_process';
 import { describe, expect, it } from 'vitest';
 
-// This repository takes an app as input and doesn't know which app it is, so no app's name belongs in code, tests, docs
-// or package manifests. That keeps it reusable and ready to open up.
-//
+// Decision: this repository takes an app as input and doesn't know which app it is, so no app's name
+// belongs in code, tests, docs or package manifests. That keeps it reusable and ready to open up.
 // The name is built from two parts so that this file passes its own check.
 const appName = ['ded', 'worc'].join('');
 
-// A deliberate mention goes here with its reason. A row that matches no file fails, so the list stays current.
+// Decision: a deliberate mention goes here with its reason. A row that matches no file fails, so the list stays current.
 const allowed: { file: string; reason: string }[] = [];
 
 function filesThatNameTheApp(): string[] {
   const root = execFileSync('git', ['rev-parse', '--show-toplevel'], { encoding: 'utf8' }).trim();
   try {
-    // -I skips binary files, -i ignores case, -l lists file names. Submodules aren't searched.
     return execFileSync('git', ['grep', '-Iil', appName], { cwd: root, encoding: 'utf8' })
       .split('\n')
       .filter(Boolean);
   } catch (error) {
-    // git grep exits with 1 when nothing matches.
+    // Decision: git grep exits with 1 when nothing matches.
     if ((error as { status?: number }).status === 1) return [];
     throw error;
   }

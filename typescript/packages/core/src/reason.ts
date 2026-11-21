@@ -18,7 +18,7 @@ export type ReasonMessage =
 
 /** Resolves to `R` when the literal reason is acceptable, otherwise to an explanatory message. */
 export type CheckReason<R extends string> = string extends R
-  ? R // not a literal: checked when the registry loads
+  ? R // Decision: not a literal, so the registry checks it when it loads
   : Lowercase<Trim<R>> extends Junk | `${Junk}.`
     ? ReasonMessage
     : Trim<R> extends `${string} ${string} ${string}`

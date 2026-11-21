@@ -1,7 +1,6 @@
 import { DatabaseSync } from 'node:sqlite';
 import type { DataStorage } from '../src/index.js';
 
-/** A DataStorage over node:sqlite that behaves like a Durable Object's: nested transactions, ArrayBuffer blobs, alarms. */
 export function memoryStorage() {
   const db = new DatabaseSync(':memory:');
   let depth = 0;

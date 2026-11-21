@@ -1,10 +1,6 @@
-// Dev-only call visualizers for realtime apps, served at /__realtime by the realtime middleware.
-// It records every request the middleware answers (HTTP, CLI, MCP, AI tools), every
-// outbound fetch the Worker makes (including model API calls), and the step-by-step
-// trace of each procedure call. The middleware only loads this under `vite dev`, so
-// production builds leave it out entirely.
+// Decision: dev only. The middleware loads this under `vite dev` alone, so production builds leave it out.
+import { createParser } from 'eventsource-parser';
 import type { CallTrace, Registry, ToolGateTrace, TraceEvent } from '@builtbyfriends/realtime';
-// The page itself (devtools.html), inlined by the realtime() plugin as a string.
 import page from 'virtual:realtime/devtools-page';
 
 type Kind = 'rpc' | 'mcp' | 'ai' | 'llm' | 'outbound' | 'direct';
@@ -14,7 +10,6 @@ type Exchange = {
   rev: number;
   at: number;
   kind: Kind;
-  /** For rpc: http or cli (from the x-realtime-surface header). */
   surface?: string;
   method: string;
   url: string;
@@ -32,7 +27,7 @@ type Exchange = {
 
 const MAX = 400;
 const SECRET_HEADERS = /^(authorization|x-api-key|cookie|set-cookie|proxy-authorization)$/i;
-// Added by the dev server or the HTTP client on every request; they only add noise.
+// Decision: the dev server or the HTTP client adds these to each request, so they only add noise.
 const NOISE_HEADERS = /^(cf-|x-forwarded-|sec-|accept-encoding$|accept-language$|connection$|host$|content-length$)/i;
 
 const mask = (value: string) => {
@@ -50,24 +45,21 @@ const headers = (h: Headers) => {
   return out;
 };
 
-/** JSON when it parses, the events of an SSE stream as an array, otherwise the text. */
 function parseBody(text: string, contentType: string | null): unknown {
   if (!text) return undefined;
   if (contentType?.includes('text/event-stream')) {
     const events: unknown[] = [];
-    for (const block of text.split(/\n\n+/)) {
-      const data = block
-        .split('\n')
-        .filter((l) => l.startsWith('data:'))
-        .map((l) => l.slice(5).trimStart())
-        .join('\n');
-      if (!data) continue;
-      try {
-        events.push(JSON.parse(data));
-      } catch {
-        events.push(data);
-      }
-    }
+    const parser = createParser({
+      onEvent: ({ data }) => {
+        try {
+          events.push(JSON.parse(data));
+        } catch {
+          events.push(data);
+        }
+      },
+    });
+    // Decision: a recorded body can stop before the blank line that ends its last event.
+    parser.feed(`${text}\n\n`);
     return { sse: events };
   }
   try {
@@ -76,8 +68,6 @@ function parseBody(text: string, contentType: string | null): unknown {
     return text.length > 20_000 ? `${text.slice(0, 20_000)}… (${text.length} chars)` : text;
   }
 }
-
-export type Devtools = ReturnType<typeof createDevtools>;
 
 export function createDevtools(registry: Registry, app: { name: string; basePath: string; mcpRoute: string }) {
   const route = '/__realtime';
@@ -104,7 +94,7 @@ export function createDevtools(registry: Registry, app: { name: string; basePath
     const { request, ...rest } = event;
     let ex = byRequest.get(request);
     if (!ex) {
-      // A call made without a request the middleware saw, e.g. from a cron or queue handler.
+      // Decision: a call can come without a request the middleware saw, for example from a cron or queue handler.
       ex = add({ at: event.at, kind: 'direct', method: 'CALL', url: '', path: event.type === 'call' ? event.procedure : event.tool, reqHeaders: {}, calls: [], gates: [] });
       byRequest.set(request, ex);
     }
@@ -113,14 +103,13 @@ export function createDevtools(registry: Registry, app: { name: string; basePath
     touch(ex);
   });
 
-  // Outbound fetches: model APIs show in the AI chat view, everything else in Network.
-  // Kept on globalThis so a hot reload of the middleware wraps the real fetch, not our wrapper.
+  // Decision: kept on globalThis, so a hot reload of the middleware wraps the real fetch and not our wrapper.
   const g = globalThis as typeof globalThis & { __realtimeFetch?: typeof fetch };
   const original = (g.__realtimeFetch ??= globalThis.fetch.bind(globalThis));
   globalThis.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
     const request = new Request(input, init);
     const url = new URL(request.url);
-    const llm = request.method === 'POST' && /\/v1\/messages$/.test(url.pathname);
+    const llm = request.method === 'POST' && url.pathname.endsWith('/v1/messages');
     const ex = add({
       at: Date.now(),
       kind: llm ? 'llm' : 'outbound',
@@ -172,7 +161,6 @@ export function createDevtools(registry: Registry, app: { name: string; basePath
 
   return {
     route,
-    /** The devtools page and its data. */
     serves: (path: string) => path === route || path.startsWith(`${route}/`),
     async serve(request: Request): Promise<Response> {
       const url = new URL(request.url);

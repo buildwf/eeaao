@@ -8,7 +8,7 @@ export const contacts = sqliteTable('contacts', {
   createdAt: integer('created_at').notNull(),
 });
 
-/** API tokens for the CLI and agents. Only the SHA-256 of the token is stored. */
+// Decision: store only the SHA-256 of each token, not the token.
 export const apiTokens = sqliteTable('api_tokens', {
   hash: text('hash').primaryKey(),
   userId: text('user_id').notNull(),

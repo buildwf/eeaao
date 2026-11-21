@@ -14,7 +14,7 @@ async function connect(token?: string) {
   const client = new Client({ name: 'vitest', version: '1' });
   const transport = new StreamableHTTPClientTransport(new URL('http://localhost/mcp'), {
     fetch: async (input, init) => {
-      // Node's fetch adds Host on the wire; workerd always has it. Add it for in-process calls.
+      // Decision: Node's fetch adds Host on the wire and workerd always has it, so add it for in-process calls.
       const request = new Request(input as string, init);
       request.headers.set('host', 'localhost');
       return mcp(request, env, ctx);

@@ -1,0 +1,24 @@
+// Finds unused files, exports and dependencies: `npx knip`. Run it in turn with `npx oxlint` until both are empty.
+{
+  "$schema": "https://unpkg.com/knip@6/schema.json",
+  "ignore": ["**/dist/**"],
+  "workspaces": {
+    ".": {
+      "entry": ["scripts/*.mjs"],
+      // The dev copies of the packages' peer dependencies (agents and @modelcontextprotocol/server for mcp).
+      "ignoreDependencies": ["agents", "@modelcontextprotocol/server"]
+    },
+    "packages/*": {
+      // The type tests run through `tsc -p <package>/type-tests/tsconfig.json`.
+      "entry": ["type-tests/**/*.ts"]
+    },
+    "packages/bwf": {
+      // The Vite plugin writes an import of it into the generated entry (src/plugin.ts).
+      "ignoreDependencies": ["@builtbyfriends/realtime-analytics"]
+    },
+    "examples/*": {
+      // scripts/e2e.mjs builds this one on purpose to check that it fails.
+      "entry": ["test/broken-worker.ts"]
+    }
+  }
+}

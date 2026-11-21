@@ -1,4 +1,3 @@
-// Snapshot test for the compiler messages in packages/core/type-tests/messages.
 import { execFileSync } from 'node:child_process';
 import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';

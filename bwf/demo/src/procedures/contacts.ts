@@ -6,7 +6,6 @@ import { adminOnly, Contact, signedIn } from './_shared';
 
 const sameOrg = { policy: 'same-org', check: (user: { orgId: string }, input: { orgId: string }) => user.orgId === input.orgId };
 
-/** Every concern decided explicitly, one opt-out with a reason. */
 export const get = procedure('contacts.get')
   .use(signedIn)
   .input(z.object({ orgId: z.string().describe('Organization id'), id: z.string().describe('Contact id') }))
@@ -22,7 +21,6 @@ export const get = procedure('contacts.get')
     return row ?? fail('NOT_FOUND');
   });
 
-/** Exposed everywhere, including as an AI tool that runs without approval. */
 export const search = procedure('contacts.search')
   .use(signedIn)
   .input(z.object({ orgId: z.string(), query: z.string().min(1), limit: z.number().int().min(1).max(50).default(10) }))
@@ -42,7 +40,6 @@ export const search = procedure('contacts.search')
     return { results: rows };
   });
 
-/** A write: declared errors, analytics props, and an AI tool that needs a person's approval. */
 export const create = procedure('contacts.create')
   .use(signedIn)
   .input(z.object({ orgId: z.string(), name: z.string().min(1).max(200), email: z.email() }))
@@ -61,7 +58,6 @@ export const create = procedure('contacts.create')
     return row;
   });
 
-/** Profile with authz and an opt-out built in; destructive on MCP; approval required for agents. */
 export const remove = procedure('contacts.delete')
   .use(adminOnly)
   .input(z.object({ id: z.string() }))

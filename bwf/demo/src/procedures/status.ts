@@ -2,7 +2,6 @@ import { z } from 'zod';
 import { procedure } from '@builtbyfriends/realtime-bwf';
 import { db, sql } from '@builtbyfriends/bwf/db';
 
-/** Opting out of everything that can be opted out of. Each opt-out still needs a reason. */
 export const status = procedure('status')
   .noAuth({ reason: 'Uptime checks run without credentials' })
   .noAuthz({ reason: 'Anyone may see whether the service is up' })

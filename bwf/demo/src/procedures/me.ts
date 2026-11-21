@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { procedure } from '@builtbyfriends/realtime-bwf';
 import { signedIn } from './_shared';
 
-/** No input, no authz needed: the caller only ever sees themselves. */
+// Decision: no authz, because the caller only ever sees themselves.
 export const me = procedure('me')
   .use(signedIn)
   .noAuthz({ reason: 'Callers only ever see their own identity' })

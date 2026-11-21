@@ -1,5 +1,3 @@
-// End to end against the example Worker running in workerd (wrangler dev):
-// HTTP statuses, the CLI, an MCP client, and the deploy gate on an esbuild bundle.
 import { spawn, execFileSync } from 'node:child_process';
 import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -81,8 +79,8 @@ try {
   dev.kill('SIGTERM');
 }
 
-// The deploy gate: bundle a Worker that hides missing decisions behind `as any` with
-// esbuild (no type checking, like wrangler deploy), then load it the way Cloudflare does.
+// Decision: the deploy gate. Bundle a Worker that hides missing decisions behind `as any` with esbuild
+// (no type checking, like wrangler deploy), then load it the way Cloudflare does.
 await check('Deploy gate: an esbuild bundle with missing decisions throws at load', async () => {
   const out = mkdtempSync(join(tmpdir(), 'realtime-broken-'));
   execFileSync(wrangler, ['deploy', '--dry-run', '--outdir', out, '--name', 'broken', 'test/broken-worker.ts'], { cwd: example, stdio: 'ignore' });

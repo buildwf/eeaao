@@ -1,5 +1,6 @@
 import { bindable, fieldSql, hash, ident, run, type DataStorage } from './storage.js';
-import type { Doc, DocOf, NewDoc, Schema, TableDef } from './schema.js';
+import type { Doc, NewDoc, Schema, TableDef } from './schema.js';
+import { ChangeRecorder } from './changes.js';
 
 const SYSTEM = new Set(['_id', '_creationTime']);
 
@@ -94,10 +95,13 @@ export class DbReader<S extends Schema> {
 export class Db<S extends Schema> extends DbReader<S> {
   /** @internal Topics touched by this call, published after the commit. */
   readonly touched = new Set<string>();
+  /** @internal Changes to synced tables, written to the change index at the end of the mutation. */
+  readonly changes: ChangeRecorder;
 
   /** @internal */
   constructor(storage: DataStorage, schema: S) {
     super(storage, schema);
+    this.changes = new ChangeRecorder(schema);
   }
 
   /** Adds an extra live topic for this call, on top of the table topics. */
@@ -109,9 +113,11 @@ export class Db<S extends Schema> extends DbReader<S> {
     const def = this.def(table);
     const doc = checked(def, value);
     const id = crypto.randomUUID();
-    run(this.storage, `INSERT INTO t_${table} (_id,_creationTime,doc) VALUES (?,?,?)`, id, Date.now(), JSON.stringify(doc));
+    const creationTime = Date.now();
+    run(this.storage, `INSERT INTO t_${table} (_id,_creationTime,doc) VALUES (?,?,?)`, id, creationTime, JSON.stringify(doc));
     const rowid = run<{ _rowid: number }>(this.storage, `SELECT _rowid FROM t_${table} WHERE _id=?`, id)[0]!._rowid;
     this.reindex(table, def, rowid, doc);
+    if (def.sync) this.changes.record(table, id, null, { ...doc, _id: id, _creationTime: creationTime });
     this.touchDoc(table, id, def, doc);
     return id;
   }
@@ -137,6 +143,7 @@ export class Db<S extends Schema> extends DbReader<S> {
     const { def, row, old } = this.load(table, id);
     run(this.storage, `DELETE FROM t_${table} WHERE _rowid=?`, row._rowid);
     this.unindex(table, def, row._rowid);
+    if (def.sync) this.changes.record(table, id, stored(row, old), null);
     this.touchDoc(table, id, def, old);
   }
 
@@ -151,6 +158,7 @@ export class Db<S extends Schema> extends DbReader<S> {
     run(this.storage, `UPDATE t_${table} SET doc=? WHERE _rowid=?`, JSON.stringify(next), row._rowid);
     this.unindex(table, def, row._rowid);
     this.reindex(table, def, row._rowid, next);
+    if (def.sync) this.changes.record(table, row._id, stored(row, old), stored(row, next));
     this.touchDoc(table, row._id, def, old);
     this.touchDoc(table, row._id, def, next);
   }
@@ -275,10 +283,8 @@ export class Query<S extends Schema, T extends keyof S & string> {
   }
 }
 
-// --------------------------------------------------------------------------- schema sync
-
-export const ftsTable = (table: string, index: string) => `fts_${ident(table, 'table')}_${ident(index, 'index')}`;
-export const vecTable = (table: string, index: string) => `vec_${ident(table, 'table')}_${ident(index, 'index')}`;
+const ftsTable = (table: string, index: string) => `fts_${ident(table, 'table')}_${ident(index, 'index')}`;
+const vecTable = (table: string, index: string) => `vec_${ident(table, 'table')}_${ident(index, 'index')}`;
 
 /**
  * Makes the database match the schema: tables, indexes, FTS5 and vector tables. Safe to
@@ -286,8 +292,12 @@ export const vecTable = (table: string, index: string) => `vec_${ident(table, 't
  * documents; a changed or removed regular index is dropped by name hash.
  */
 export function syncSchema(storage: DataStorage, schema: Schema): void {
+  // Decision: a wake with the same schema as last time reads one row and stops. Measured on a real app's schema
+  // (2026-11-21), the full pass read about 8,000 rows on each wake.
+  const signature = schemaSignature(schema);
   storage.transactionSync(() => {
     run(storage, `CREATE TABLE IF NOT EXISTS _meta (key TEXT PRIMARY KEY, value TEXT NOT NULL)`);
+    if (run<{ value: string }>(storage, `SELECT value FROM _meta WHERE key='schema'`)[0]?.value === signature) return;
     for (const [table, def] of Object.entries(schema)) {
       ident(table, 'table');
       run(
@@ -339,10 +349,16 @@ export function syncSchema(storage: DataStorage, schema: Schema): void {
         });
       }
     }
+    run(storage, `INSERT OR REPLACE INTO _meta (key,value) VALUES ('schema',?)`, signature);
   });
 }
 
-/** Creates a derived table once, and rebuilds it when its definition changed. */
+/** What `syncSchema` builds from: tables, indexes, search and vectors. Validators and topic functions don't change tables. */
+export function schemaSignature(schema: Schema): string {
+  const shape = Object.entries(schema).map(([table, def]) => [table, def.indexes ?? {}, def.search ?? {}, def.vectors ?? {}]);
+  return `v1:${JSON.stringify(shape)}`;
+}
+
 function derived(storage: DataStorage, table: string, key: string, signature: string, name: string, build: () => void) {
   const metaKey = `${table}/${key}`;
   const stored = run<{ value: string }>(storage, `SELECT value FROM _meta WHERE key=?`, metaKey)[0]?.value;
@@ -352,7 +368,9 @@ function derived(storage: DataStorage, table: string, key: string, signature: st
   run(storage, `INSERT OR REPLACE INTO _meta (key,value) VALUES (?,?)`, metaKey, signature);
 }
 
-// --------------------------------------------------------------------------- helpers
+function stored(row: Row, doc: Record<string, unknown>): Record<string, unknown> {
+  return { ...doc, _id: row._id, _creationTime: row._creationTime };
+}
 
 function toDoc(row: Row): any {
   return { ...JSON.parse(row.doc), _id: row._id, _creationTime: row._creationTime };
@@ -408,5 +426,3 @@ function cosine(a: readonly number[], b: Float32Array): number {
   }
   return na && nb ? dot / Math.sqrt(na * nb) : 0;
 }
-
-export type { DocOf };

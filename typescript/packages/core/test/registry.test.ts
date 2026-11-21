@@ -7,7 +7,7 @@ import { memoryAnalytics } from '@builtbyfriends/realtime-analytics';
 import { getContact, ping, purge } from './fixtures.js';
 
 const R = (why: string) => ({ reason: why as string });
-/** A complete public procedure built with plain strings, as untyped JS would. */
+// Decision: built with plain strings, the way untyped JS would.
 const full = (name: string, overrides: (b: any) => any = (b) => b) =>
   overrides(
     (procedure(name) as any)

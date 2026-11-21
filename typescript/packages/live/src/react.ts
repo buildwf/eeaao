@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState, useSyncExternalStore } from 'react';
 import type { InputOf, OutputOf } from '@builtbyfriends/realtime';
-import type { Live, MutateOptions, Procs, QueryOptions, QueryState, Typed } from './index.js';
+import { stableKey, type Live, type MutateOptions, type Procs, type QueryOptions, type QueryState, type Typed } from './index.js';
 
 export type UseQueryResult<T> = QueryState<T> & {
   /** `status === 'loading'`, for the first load only. Later refetches keep the old data. */
@@ -24,12 +24,12 @@ export function createLiveHooks<R extends Typed>(live: Live<R>) {
     input: InputOf<Procs<R>[N]>,
     options: QueryOptions = {},
   ): UseQueryResult<OutputOf<Procs<R>[N]>> {
-    const topicsKey = JSON.stringify(options.topics ?? null);
+    const topicsKey = stableKey(options.topics ?? null);
     const handle = useMemo(
       () => live.query(name, input, options),
-      // The input and topics are compared by value, so an inline object does not resubscribe.
-      // eslint-disable-next-line react-hooks/exhaustive-deps
-      [name, JSON.stringify(input), topicsKey, options.enabled],
+      // Decision: the input and topics are compared by value with sorted keys, so an inline object, or
+      // the same object with its keys in another order, doesn't resubscribe.
+      [name, stableKey(input), topicsKey, options.enabled],
     );
     const state = useSyncExternalStore(handle.subscribe, handle.getSnapshot, handle.getSnapshot);
     return { ...state, loading: state.status === 'loading', refetch: handle.refetch } as UseQueryResult<OutputOf<Procs<R>[N]>>;
