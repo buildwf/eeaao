@@ -1,5 +1,19 @@
 import { Db, DbReader, syncSchema } from './db.js';
 import { pull, syncChanges, type ChangeBatch, type PullResult } from './changes.js';
+import { SyncSockets, type SocketIdentity } from './sockets.js';
+
+/** The header the door sets on a sync socket request: JSON `{ actor, groups }`. See `syncRequest`. */
+export const SYNC_HEADER = 'x-realtime-sync';
+
+/**
+ * Builds the request a Worker forwards to the data object to open a device's sync socket. The door decides `actor` and
+ * `groups` itself; any header of that name from the device is replaced.
+ */
+export function syncRequest(request: Request, who: SocketIdentity): Request {
+  const headers = new Headers(request.headers);
+  headers.set(SYNC_HEADER, JSON.stringify({ actor: who.actor, groups: who.groups }));
+  return new Request(request.url, { method: request.method, headers });
+}
 import { Scheduler, syncJobs, type ScheduledJob } from './scheduler.js';
 import type { Schema } from './schema.js';
 import type { DataStorage } from './storage.js';
@@ -94,6 +108,8 @@ export type Data<S extends Schema, F extends Record<string, AnyFn>, _J extends R
 
 export interface DataObject {
   run(kind: 'query' | 'mutation', name: string, args: unknown): Promise<unknown>;
+  /** Changes the sync groups an actor's open sockets may read, after they join or leave something. */
+  regroup(actor: string, groups: string[]): Promise<void>;
   /** What changed in these sync groups after `after`. Check the caller may read each group before calling. */
   pull(groups: string[], after: number, limit?: number): Promise<PullResult>;
   job(id: string): Promise<ScheduledJob | null>;
@@ -115,10 +131,13 @@ export function defineData<S extends Schema, F extends Record<string, AnyFn>, J 
     durableObject(Base) {
       return class extends (Base as unknown as new (...args: any[]) => object) {
         #engine: Engine;
+        #sockets: SyncSockets;
         constructor(...args: any[]) {
           super(...args);
-          const [ctx, env] = args as [{ storage: DataStorage; blockConcurrencyWhile<T>(fn: () => Promise<T>): Promise<T> }, unknown];
+          const [ctx, env] = args as [{ storage: DataStorage; blockConcurrencyWhile<T>(fn: () => Promise<T>): Promise<T> } & ConstructorParameters<typeof SyncSockets>[0], unknown];
           this.#engine = engine(ctx.storage, env);
+          this.#sockets = new SyncSockets(ctx, (groups, after, limit) => this.#engine.pull(groups, after, limit));
+          this.#engine.listen((batch) => this.#sockets.broadcast(batch));
           // Schema sync is synchronous, but block anyway so no request sees a half-built table.
           void ctx.blockConcurrencyWhile(async () => {
             this.#engine.init();
@@ -133,6 +152,36 @@ export function defineData<S extends Schema, F extends Record<string, AnyFn>, J 
         }
         pull(groups: string[], after: number, limit?: number) {
           return Promise.resolve(this.#engine.pull(groups, after, limit));
+        }
+        regroup(actor: string, groups: string[]) {
+          this.#sockets.regroup(actor, groups);
+          return Promise.resolve();
+        }
+        fetch(request: Request): Response | Promise<Response> {
+          const header = request.headers.get(SYNC_HEADER);
+          if (header === null) {
+            const base = (Base.prototype as { fetch?: (r: Request) => Response | Promise<Response> }).fetch;
+            return base ? base.call(this, request) : new Response('not found', { status: 404 });
+          }
+          if (request.headers.get('upgrade')?.toLowerCase() !== 'websocket') return new Response('expected a WebSocket', { status: 426 });
+          // Workers runtime globals; this package doesn't load the Workers types.
+          const Pair = (globalThis as unknown as { WebSocketPair: new () => [unknown, unknown] }).WebSocketPair;
+          const [device, object] = new Pair();
+          this.#sockets.accept(object as never, JSON.parse(header) as SocketIdentity);
+          return new Response(null, { status: 101, webSocket: device } as ResponseInit);
+        }
+        webSocketMessage(ws: WebSocket, message: string | ArrayBuffer) {
+          if (this.#sockets.message(ws as never, message)) return;
+          return (Base.prototype as { webSocketMessage?: (ws: WebSocket, m: string | ArrayBuffer) => unknown }).webSocketMessage?.call(this, ws, message);
+        }
+        webSocketClose(ws: WebSocket, code: number, reason: string, wasClean: boolean) {
+          const base = (Base.prototype as { webSocketClose?: (...a: unknown[]) => unknown }).webSocketClose;
+          if (base) return base.call(this, ws, code, reason, wasClean);
+          try {
+            ws.close(1000, 'closed');
+          } catch {
+            // Already closed.
+          }
         }
         alarm() {
           return this.#engine.alarm();
@@ -167,6 +216,13 @@ export class Engine {
     private readonly env: any,
     private readonly def: Resolved,
   ) {}
+
+  private readonly listeners: ((batch: ChangeBatch) => void)[] = [];
+
+  /** @internal Called after each commit that touched synced tables, before `onChanges`. */
+  listen(fn: (batch: ChangeBatch) => void): void {
+    this.listeners.push(fn);
+  }
 
   init(): void {
     syncSchema(this.storage, this.def.schema);
@@ -265,6 +321,13 @@ export class Engine {
 
   private async afterCommit(touched: Set<string>, queueChanged: boolean, batch: ChangeBatch | null = null): Promise<void> {
     if (queueChanged) await this.arm(this.scheduler());
+    if (batch) for (const fn of this.listeners) {
+      try {
+        fn(batch);
+      } catch (e) {
+        console.error('change listener failed', e);
+      }
+    }
     if (batch && this.def.onChanges) {
       const onChanges = this.def.onChanges;
       const changes = batch;
