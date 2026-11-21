@@ -78,10 +78,51 @@ export function bwfTransport(options: BwfTransportOptions): LiveTransport {
     return stream;
   }
 
+  /**
+   * One bwf subscription per topic, shared by every query listening to it. bwf allows a limited
+   * number of subscriptions per topic and per connection (256 by default), and a page often has
+   * many queries on the same topic, so one subscription each would run out.
+   */
+  const topics = new Map<string, { listeners: Set<() => void>; stop: Promise<() => Promise<void>> }>();
+
+  function release(topic: string, entry: { listeners: Set<() => void>; stop: Promise<() => Promise<void>> }) {
+    if (entry.listeners.size || topics.get(topic) !== entry) return;
+    topics.delete(topic);
+    void entry.stop.then((stop) => stop()).catch(() => {});
+  }
+
   return {
     async subscribe(topic, onEvent) {
-      const stop = await open().subscribe({ id: crypto.randomUUID(), topic, onEvent: () => onEvent() });
-      return () => void stop().catch(() => {});
+      let entry = topics.get(topic);
+      if (!entry) {
+        const listeners = new Set<() => void>();
+        const stop = open().subscribe({
+          id: topic,
+          topic,
+          onEvent: () => {
+            for (const listener of [...listeners]) listener();
+          },
+        });
+        entry = { listeners, stop };
+        topics.set(topic, entry);
+        const failed = entry;
+        stop.catch(() => {
+          if (topics.get(topic) === failed) topics.delete(topic);
+        });
+      }
+      const listener = () => onEvent();
+      entry.listeners.add(listener);
+      try {
+        await entry.stop;
+      } catch (err) {
+        entry.listeners.delete(listener);
+        throw err;
+      }
+      const current = entry;
+      return () => {
+        current.listeners.delete(listener);
+        release(topic, current);
+      };
     },
     onReconnect(callback) {
       reconnects.add(callback);
