@@ -105,7 +105,6 @@ export function bwfTransport(options: BwfTransportOptions): LiveTransport {
         });
         entry = { listeners, stop };
         topics.set(topic, entry);
-        // A refused subscription is forgotten, so the next query on the topic asks again.
         const failed = entry;
         stop.catch(() => {
           if (topics.get(topic) === failed) topics.delete(topic);
