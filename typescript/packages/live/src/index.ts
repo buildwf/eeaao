@@ -49,6 +49,20 @@ export type QueryOptions = {
   enabled?: boolean;
 };
 
+/** What `optimistic` gets: change a watched query's data now, by procedure name and input. */
+export type OptimisticStore<R> = {
+  update<N extends keyof Procs<R> & string>(
+    name: N,
+    input: InputOf<Procs<R>[N]>,
+    fn: (data: OutputOf<Procs<R>[N]>) => OutputOf<Procs<R>[N]>,
+  ): void;
+};
+
+export type MutateOptions<R> = {
+  /** Change watched queries before the server answers. Undone if the call fails. */
+  optimistic?: (store: OptimisticStore<R>) => void;
+};
+
 export interface QueryHandle<T = unknown> {
   subscribe(listener: () => void): () => void;
   getSnapshot(): QueryState<T>;
@@ -186,9 +200,40 @@ export function createLive<R extends Typed = Registry<any>>(options: LiveOptions
     };
   }
 
-  /** Runs a procedure. The server publishes the topics the change touched, so live queries refresh themselves. */
-  function mutate<N extends keyof Procs<R> & string>(name: N, input: InputOf<Procs<R>[N]>): Promise<OutputOf<Procs<R>[N]>> {
-    return options.client.call(name, input);
+  /**
+   * Runs a procedure. The server publishes the topics the change touched, so live queries refresh themselves.
+   *
+   * `optimistic` changes the data of watched queries right away, before the server answers. If the call fails, each
+   * changed query goes back to what it showed before (unless something newer arrived meanwhile) and fetches again.
+   * If it succeeds, the changed queries fetch again too, since a topic event can be missed, so the server's answer
+   * replaces the guess either way.
+   */
+  async function mutate<N extends keyof Procs<R> & string>(
+    name: N,
+    input: InputOf<Procs<R>[N]>,
+    mutateOptions: MutateOptions<R> = {},
+  ): Promise<OutputOf<Procs<R>[N]>> {
+    const changed: Array<{ e: Entry; before: QueryState<any>; guess: QueryState<any> }> = [];
+    mutateOptions.optimistic?.({
+      update(queryName, queryInput, fn) {
+        const prefix = `${queryName}:${stableKey(queryInput)}:`;
+        for (const e of entries.values()) {
+          if (!e.key.startsWith(prefix) || e.state.data === undefined) continue;
+          const before = e.state;
+          const guess = { ...before, data: fn(before.data) } as QueryState<any>;
+          set(e, guess);
+          changed.push({ e, before, guess });
+        }
+      },
+    });
+    try {
+      return await options.client.call(name, input);
+    } catch (err) {
+      for (const { e, before, guess } of changed.reverse()) if (e.state === guess) set(e, before);
+      throw err;
+    } finally {
+      for (const { e } of changed) if (e.listeners.size) void fetchNow(e);
+    }
   }
 
   /** Refetch every query that is currently being watched. */

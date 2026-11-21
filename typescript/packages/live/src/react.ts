@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState, useSyncExternalStore } from 'react';
 import type { InputOf, OutputOf } from '@builtbyfriends/realtime';
-import { stableKey, type Live, type Procs, type QueryOptions, type QueryState, type Typed } from './index.js';
+import { stableKey, type Live, type MutateOptions, type Procs, type QueryOptions, type QueryState, type Typed } from './index.js';
 
 export type UseQueryResult<T> = QueryState<T> & {
   /** `status === 'loading'`, for the first load only. Later refetches keep the old data. */
@@ -14,6 +14,9 @@ export type UseQueryResult<T> = QueryState<T> & {
  *   const { useQuery, useMutation } = createLiveHooks(live);
  *   const messages = useQuery('messages.list', { channel });   // refetches when its topics fire
  *   const send = useMutation('messages.send');
+ *   send.mutate({ channel, body }, {
+ *     optimistic: (store) => store.update('messages.list', { channel }, (list) => [...list, body]),
+ *   });
  */
 export function createLiveHooks<R extends Typed>(live: Live<R>) {
   function useQuery<N extends keyof Procs<R> & string>(
@@ -36,11 +39,11 @@ export function createLiveHooks<R extends Typed>(live: Live<R>) {
     const [pending, setPending] = useState(0);
     const [error, setError] = useState<Error | undefined>();
     const mutate = useCallback(
-      async (input: InputOf<Procs<R>[N]>) => {
+      async (input: InputOf<Procs<R>[N]>, options?: MutateOptions<R>) => {
         setPending((n) => n + 1);
         setError(undefined);
         try {
-          return await live.mutate(name, input);
+          return await live.mutate(name, input, options);
         } catch (e) {
           const err = e instanceof Error ? e : new Error(String(e));
           setError(err);
