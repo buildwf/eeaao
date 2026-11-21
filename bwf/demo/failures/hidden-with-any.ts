@@ -1,5 +1,5 @@
-// The type gate can be dodged with `as any` (or plain JS). The registry checks again
-// when the Worker starts, so this still can't ship.
+// Decision: this fixture dodges the type gate with `as any` on purpose. The registry checks again
+// when the Worker starts, so it still can't ship.
 import { z } from 'zod';
 import { procedure } from '@builtbyfriends/realtime-bwf';
 

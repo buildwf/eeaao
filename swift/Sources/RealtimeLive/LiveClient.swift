@@ -113,8 +113,6 @@ public actor LiveClient {
     continuation.finish()
   }
 
-  // MARK: - Connection
-
   private func run() async {
     var attempt = 0
     while !Task.isCancelled {
@@ -132,7 +130,6 @@ public actor LiveClient {
     }
   }
 
-  /// One connection, from open until it ends. It always ends by throwing.
   private func listen(onOpen: () -> Void) async throws {
     var request = URLRequest(url: streamURL())
     request.setValue("text/event-stream", forHTTPHeaderField: "Accept")
@@ -149,7 +146,7 @@ public actor LiveClient {
     onOpen()
     continuation.yield(.connected(reconnect: reconnect))
 
-    // `AsyncBytes.lines` drops blank lines, and a blank line is what ends a frame, so split by hand.
+    // Decision: `AsyncBytes.lines` drops blank lines, and a blank line is what ends a frame, so split by hand.
     var parser = SSEParser()
     var line = Data()
     for try await byte in bytes {
@@ -158,7 +155,6 @@ public actor LiveClient {
       let text = String(decoding: line, as: UTF8.self)
       line.removeAll(keepingCapacity: true)
       guard let frame = parser.feed(text), let event = SSEParser.liveEvent(from: frame) else { continue }
-      // Hold only what this client subscribed to, with the topic it subscribed with.
       guard subscriptions[event.subscriptionId]?.topic == event.topic else { continue }
       if let eventId = event.eventId { subscriptions[event.subscriptionId]?.lastEventId = eventId }
       continuation.yield(.event(event))
@@ -174,8 +170,6 @@ public actor LiveClient {
     }
   }
 
-  // MARK: - Requests
-
   private func streamURL() -> URL {
     var components = URLComponents(url: url, resolvingAgainstBaseURL: false)!
     components.queryItems = (components.queryItems ?? []) + [URLQueryItem(name: "connectionId", value: connectionId)]
@@ -186,7 +180,6 @@ public actor LiveClient {
     for (name, value) in try await headers() { request.setValue(value, forHTTPHeaderField: name) }
   }
 
-  /// Sends operations in requests of at most 100, and returns every result.
   private func send(_ operations: [LiveControl.Operation]) async throws -> [LiveControl.Result] {
     var results: [LiveControl.Result] = []
     var rest = operations[...]

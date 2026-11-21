@@ -12,12 +12,9 @@ type ToolUse = { type: 'tool_use'; id: string; name: string; input: unknown };
 const toolUses = (m: Msg | undefined): ToolUse[] =>
   m?.role === 'assistant' && Array.isArray(m.content) ? (m.content.filter((b) => b.type === 'tool_use') as unknown as ToolUse[]) : [];
 
-/**
- * An agent inside the app. It calls Claude with the app's own AI tools and runs each tool
- * call as the signed-in user, so the tools' auth, policies and approvals all apply. When a
- * tool needs approval the turn stops and returns `pending`; send the same messages back
- * with `approve` (tool_use ids) or `decline` to continue.
- */
+// Decision: each tool call runs as the signed-in user, so the tools' auth, policies and approvals apply.
+// When a tool needs approval the turn stops and returns `pending`. Send the same messages back with
+// `approve` (tool_use ids) or `decline` to continue.
 export const ask = procedure('assistant.ask')
   .use(signedIn)
   .input(
@@ -48,7 +45,6 @@ export const ask = procedure('assistant.ask')
     const system = `You help ${ctx.id} manage contacts in organization ${ctx.orgId}. Use the tools; never guess ids.`;
 
     for (let turn = 0; turn < 8; turn++) {
-      // Run tool calls the model asked for that have no result yet (on a later call, after approval).
       const asked = toolUses(messages[messages.length - 1]);
       if (asked.length) {
         const results = [];

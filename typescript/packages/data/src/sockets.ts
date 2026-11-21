@@ -26,7 +26,7 @@ type State = {
   getWebSockets(tag?: string): Socket[];
 };
 
-/** Socket attachments hold at most 16 KiB. */
+// Decision: socket attachments hold at most 16 KiB, so stay under that.
 const MAX_ATTACHMENT = 16_000;
 
 export class SyncSockets {
@@ -99,6 +99,6 @@ function trySend(ws: Socket, message: unknown): void {
   try {
     ws.send(JSON.stringify(message));
   } catch {
-    // The socket closed between the commit and the send. The device pulls on reconnect.
+    // Decision: the socket closed between the commit and the send. The device pulls on reconnect.
   }
 }

@@ -5,7 +5,6 @@ import { join, relative } from 'node:path';
 const REGISTRY = 'virtual:realtime-registry';
 const RESOLVED = '\0' + REGISTRY;
 
-/** Zero-config realtime for bwf: discovers procedures/, builds the registry, mounts /rpc and /mcp. */
 export function realtime(opts: { dir?: string; analytics?: string } = {}): Plugin {
   const root = process.cwd();
   const dir = opts.dir ?? 'procedures';

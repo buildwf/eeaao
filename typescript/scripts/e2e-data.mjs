@@ -1,5 +1,3 @@
-// End to end for @builtbyfriends/realtime-data in workerd (wrangler dev): the Durable Object's SQLite, FTS5,
-// transactions, and alarm-driven scheduled jobs, behind realtime procedures.
 import { spawn } from 'node:child_process';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';

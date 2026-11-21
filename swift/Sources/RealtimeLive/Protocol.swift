@@ -1,7 +1,7 @@
 import Foundation
 
-// The wire protocol of a bwf live stream. See docs/live-protocol.md in the Realtime repository.
-// Nothing in this file touches the network, so it builds and tests on Linux too.
+// Decision: the wire protocol is docs/live-protocol.md. Keep this file in step with it. Nothing here
+// touches the network, so it builds and tests on Linux too.
 
 /// Any JSON value, for an event's `data`.
 public enum JSONValue: Codable, Equatable, Sendable {

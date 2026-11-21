@@ -55,7 +55,7 @@ export async function runTool(
 ): Promise<ToolRunResult> {
   const found = aiProcedures(registry).find((x) => x.info.name === toolName);
   const gate = !found ? 'unknown-tool' : !found.info.needsApproval ? 'no-approval-needed' : exec.approved ? 'approved' : 'needs-approval';
-  // Lets dev tools show the approval gate next to the call it guards.
+  // Decision: report the approval gate, so dev tools can show it next to the call it guards.
   if (registry.trace?.active) registry.trace.emit({ type: 'tool-gate', at: Date.now(), tool: toolName, ...(found ? { procedure: found.p.name } : {}), request: exec.request, input, gate });
   if (!found) return { status: 'unknown_tool', tool: toolName };
   if (gate === 'needs-approval') return { status: 'needs_approval', tool: toolName, input };
@@ -88,7 +88,7 @@ export function aiSdkTools<S>(
       description: info.description,
       inputSchema: helpers.jsonSchema(info.inputSchema),
       needsApproval: info.needsApproval,
-      // The AI SDK only calls execute after its own approval step, so approval is granted here.
+      // Decision: the AI SDK only calls execute after its own approval step, so approval is granted here.
       execute: async (input) => {
         const r = await registry.call(p.name, input, { ...exec, surface: 'ai' });
         if (r.ok) return r.value;

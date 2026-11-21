@@ -18,8 +18,6 @@ import { Scheduler, syncJobs, type ScheduledJob } from './scheduler.js';
 import type { Schema } from './schema.js';
 import type { DataStorage } from './storage.js';
 
-// ---------------------------------------------------------------------------- functions
-
 export type QueryCtx<S extends Schema> = { db: DbReader<S>; env: any; now: number };
 export type MutationCtx<S extends Schema> = { db: Db<S>; scheduler: Scheduler; env: any; now: number };
 
@@ -45,8 +43,6 @@ export type DataClient<F> = {
   job(id: string): Promise<ScheduledJob | null>;
 };
 
-// ---------------------------------------------------------------------------- jobs
-
 export type JobCtx<F> = {
   env: any;
   id: string;
@@ -58,8 +54,6 @@ export type JobCtx<F> = {
 /** `concurrent`: a job that runs long or waits on others, so it doesn't hold up the rest. By default jobs run one at a time. */
 export type JobOptions = { concurrent?: boolean };
 export type JobFn<F = any, A = any> = (ctx: JobCtx<F>, args: A) => void | Promise<void>;
-
-// ---------------------------------------------------------------------------- definition
 
 export type DataDefinition<S extends Schema, F extends Record<string, AnyFn>, J extends Record<string, JobFn<F>>> = {
   schema: S;
@@ -138,7 +132,7 @@ export function defineData<S extends Schema, F extends Record<string, AnyFn>, J 
           this.#engine = engine(ctx.storage, env);
           this.#sockets = new SyncSockets(ctx, (groups, after, limit) => this.#engine.pull(groups, after, limit));
           this.#engine.listen((batch) => this.#sockets.broadcast(batch));
-          // Schema sync is synchronous, but block anyway so no request sees a half-built table.
+          // Decision: schema sync is synchronous, but block anyway so no request sees a half-built table.
           void ctx.blockConcurrencyWhile(async () => {
             this.#engine.init();
             await this.#engine.rearm();
@@ -164,7 +158,7 @@ export function defineData<S extends Schema, F extends Record<string, AnyFn>, J 
             return base ? base.call(this, request) : new Response('not found', { status: 404 });
           }
           if (request.headers.get('upgrade')?.toLowerCase() !== 'websocket') return new Response('expected a WebSocket', { status: 426 });
-          // Workers runtime globals; this package doesn't load the Workers types.
+          // Decision: read WebSocketPair from globalThis, because this package doesn't load the Workers types.
           const Pair = (globalThis as unknown as { WebSocketPair: new () => [unknown, unknown] }).WebSocketPair;
           const [device, object] = new Pair();
           this.#sockets.accept(object as never, JSON.parse(header) as SocketIdentity);
@@ -179,9 +173,7 @@ export function defineData<S extends Schema, F extends Record<string, AnyFn>, J 
           if (base) return base.call(this, ws, code, reason, wasClean);
           try {
             ws.close(1000, 'closed');
-          } catch {
-            // Already closed.
-          }
+          } catch {}
         }
         alarm() {
           return this.#engine.alarm();
@@ -196,8 +188,6 @@ export function defineData<S extends Schema, F extends Record<string, AnyFn>, J 
     },
   };
 }
-
-// ---------------------------------------------------------------------------- engine
 
 type Resolved = {
   schema: Schema;
@@ -246,7 +236,7 @@ export class Engine {
 
     const db = new Db(this.storage, this.def.schema);
     const scheduler = this.scheduler();
-    // One SQLite transaction: a throw rolls back every write and every scheduled job.
+    // Decision: one SQLite transaction, so a throw rolls back each write and each scheduled job.
     let batch: ChangeBatch | null = null;
     const result = this.storage.transactionSync(() => {
       const out = fn.run({ db, scheduler, env: this.env, now: Date.now() }, args);
@@ -267,7 +257,7 @@ export class Engine {
     const max = this.def.maxJobAttempts ?? 5;
     const running = new Set<string>();
     const active: Promise<void>[] = [];
-    // The job holding the one-at-a-time lane. A job that hangs gives the lane up after `laneMs`, so it can't hold up the rest.
+    // Decision: a job that hangs gives up the one-at-a-time lane after `laneMs`, so it can't hold up the rest.
     let laneOwner: string | null = null;
     const laneMs = this.def.laneMs ?? 120_000;
     for (;;) {
@@ -337,7 +327,7 @@ export class Engine {
     }
     if (touched.size && this.def.onCommit) {
       const onCommit = this.def.onCommit;
-      // Started, not awaited: see `onCommit` in DataDefinition.
+      // Decision: started, not awaited. See `onCommit` in DataDefinition for why.
       void Promise.resolve()
         .then(() => onCommit([...touched], this.env))
         .catch((e) => console.error('onCommit failed', e));

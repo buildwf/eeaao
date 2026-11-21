@@ -1,8 +1,7 @@
 // swift-tools-version: 5.9
 import PackageDescription
 
-// The Swift client for bwf live streams. SwiftPM reads this file from the root of the repository,
-// so the sources live in swift/ and are pointed at from here.
+// Decision: SwiftPM reads Package.swift from the repository root, so it lives here and points at swift/.
 let package = Package(
   name: "RealtimeLive",
   platforms: [.iOS(.v16), .macOS(.v13)],

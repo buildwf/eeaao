@@ -26,7 +26,6 @@ function typeOf(p: Prop): string {
 
 class UsageError extends Error {}
 
-/** Flags every command takes. A command adds its own from the manifest (`optionsFor`). */
 const globalOptions: ParseArgsOptionsConfig = {
   url: { type: 'string' },
   token: { type: 'string' },
@@ -34,23 +33,20 @@ const globalOptions: ParseArgsOptionsConfig = {
   help: { type: 'boolean', short: 'h' },
 };
 
-/** A command's flags for parseArgs: true/false flags stand alone, the rest take a value. */
 function optionsFor(entry: ManifestEntry): ParseArgsOptionsConfig {
   const props = (entry.input as { properties?: Record<string, Prop> } | undefined)?.properties ?? {};
   const own = Object.entries(props).map(([k, p]) => [kebab(k), { type: typeOf(p) === 'boolean' ? 'boolean' : 'string' }]);
   return { ...globalOptions, ...Object.fromEntries(own) };
 }
 
-/**
- * Splits argv into words and flags with node's parseArgs. A flag it doesn't know takes the next
- * word as its value, and so does a true/false flag when that word is `true` or `false`, so
- * `--org o1` reaches the unknown-flag message and `--exact false` still works.
- */
+// Decision: a flag parseArgs doesn't know takes the next word as its value, and so does a true/false
+// flag when that word is `true` or `false`, so `--org o1` reaches the unknown-flag message and
+// `--exact false` still works.
 function splitArgs(argv: string[], options: ParseArgsOptionsConfig) {
   const { tokens } = parseArgs({ args: argv, options, strict: false, allowPositionals: true, tokens: true });
   const words: string[] = [];
   const flags: [string, string | true][] = [];
-  let open: { index: number; name: string } | undefined; // a flag with no value yet
+  let open: { index: number; name: string } | undefined;
   for (const t of tokens) {
     if (t.kind === 'option') {
       flags.push([t.name, t.value ?? true]);
@@ -164,8 +160,8 @@ function listHelp(manifest: Manifest): string {
  */
 export async function run(io: Io): Promise<number> {
   const f = io.fetch ?? fetch;
-  // A first pass for the global flags and the command words. The command's own flags are
-  // only known once the manifest is in, so its flags are split again below.
+  // Decision: a first pass for the global flags and the command words. The command's own flags are
+  // only known once the manifest is in, so they're split again below.
   const { words, flags } = splitArgs(io.argv, globalOptions);
   const take = (name: string) => flags.find(([k]) => k === name)?.[1];
   const url = (take('url') as string | undefined) ?? io.env.REALTIME_URL;

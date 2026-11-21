@@ -27,7 +27,6 @@ private const val EVENT = """data: {"subscriptionId":"wall","topic":"wall:1","ty
 private const val STRANGER = """data: {"subscriptionId":"other","topic":"wall:1"}"""
 private const val OK = """{"accepted":true,"connectionId":"c","results":[{"ok":true,"kind":"subscribe","id":"wall","topic":"wall:1"}]}"""
 
-/** The client against a fake of a bwf live route. */
 class LiveClientTest {
     private lateinit var server: MockWebServer
     private lateinit var scope: CoroutineScope
@@ -65,7 +64,7 @@ class LiveClientTest {
     @Test fun sendsTheTokenSubscribesAndDeliversOnlyWhatItSubscribedTo() = runBlocking {
         route({ sse(": connected", STRANGER, EVENT) })
         val live = client()
-        live.subscribe("wall", "wall:1") // before start: held until the stream opens
+        live.subscribe("wall", "wall:1")
         live.start()
         val event = withTimeout(5_000) { live.events.first() }
         assertEquals("wall", event.subscriptionId)
@@ -83,7 +82,7 @@ class LiveClientTest {
     }
 
     @Test fun reconnectsWithTheSameIdSubscribesAgainAndReportsIt() = runBlocking {
-        route({ sse(": connected") }) // ends right away, like a dropped stream
+        route({ sse(": connected") })
         val live = client()
         live.subscribe("wall", "wall:1")
         live.start()

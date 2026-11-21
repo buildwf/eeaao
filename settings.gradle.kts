@@ -1,4 +1,4 @@
-// Only the Kotlin client is a Gradle build. JitPack builds from the root of the repository.
+// Decision: only the Kotlin client is a Gradle build. It sits at the root because JitPack builds from there.
 pluginManagement {
     repositories {
         gradlePluginPortal()

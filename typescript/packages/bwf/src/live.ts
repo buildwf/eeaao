@@ -57,7 +57,7 @@ export function bwfTransport(options: BwfTransportOptions): LiveTransport {
       ? fetchEventSource({ headers: options.headers, fetch: options.fetch })
       : (globalThis as any).EventSource) as new (url: string, init?: { withCredentials?: boolean }) => any;
     if (!Native) throw new Error('EventSource is not available here; live queries need a browser (or a polyfill)');
-    // bwf opens a fresh EventSource for each reconnect, so count `open` events across all of them.
+    // Decision: bwf opens a fresh EventSource for each reconnect, so count `open` events across all of them.
     class Watching extends Native {
       constructor(url: string, init?: { withCredentials?: boolean }) {
         super(url, init);

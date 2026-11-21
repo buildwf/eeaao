@@ -2,10 +2,7 @@ import type { AnySchema, InferIn, InferOut } from './schema.js';
 import type { BuiltinErrorCode, ErrorSpec } from './errors.js';
 import type { CheckReason } from './reason.js';
 
-// ---------------------------------------------------------------------------
-// Concerns. Every procedure must decide all of them, in any order.
-// The order here is the order error messages list them in.
-// ---------------------------------------------------------------------------
+// Decision: the order here is the order error messages list the concerns in.
 
 export const CONCERNS = ['authn', 'authz', 'input', 'output', 'errors', 'analytics', 'mcp', 'cli', 'aiTool'] as const;
 export type Concern = (typeof CONCERNS)[number];
@@ -53,10 +50,8 @@ export type Decisions = {
   aiTool: ({ kind: 'tool' } & AiToolSpec & Via) | OptOut;
 };
 
-// ---------------------------------------------------------------------------
-// Type-state. The builder's type records which concerns are decided; the runtime
+// Decision: type-state. The builder's type records which concerns are decided; the runtime
 // value is only a record of decisions.
-// ---------------------------------------------------------------------------
 
 export interface State {
   name: string;
@@ -227,10 +222,8 @@ export type InputOf<P> = P extends Procedure<infer S> ? S['inRaw'] : never;
 export type OutputOf<P> = P extends Procedure<infer S> ? S['out'] : never;
 export type ErrorsOf<P> = P extends Procedure<infer S> ? S['err'] : never;
 
-// ---------------------------------------------------------------------------
-// Runtime. Builders are immutable: every call returns a new builder, so a partial
-// chain can be shared without leaking decisions between procedures.
-// ---------------------------------------------------------------------------
+// Decision: builders are immutable. Each call returns a new builder, so a partial chain can be
+// shared without leaking decisions between procedures.
 
 function make(kind: Kind, name: string, decisions: Partial<Decisions>, profiles: string[]): any {
   const label = kind === 'profile' ? `profile "${name}"` : `procedure "${name}"`;
@@ -285,8 +278,8 @@ function make(kind: Kind, name: string, decisions: Partial<Decisions>, profiles:
     name,
     handler: (fn: (args: HandlerArgs<any>) => unknown) => {
       if (typeof fn !== 'function') throw new Error(`${label}: handler() needs a function`);
-      // Completeness is checked when the registry loads, so the error lists every
-      // problem at once and also covers code that skipped the type checker.
+      // Decision: completeness is checked when the registry loads, so the error lists each problem at
+      // once and also covers code that skipped the type checker.
       return Object.freeze({ '~realtime': 'procedure', name, decisions: { ...decisions }, profiles, handler: fn });
     },
   };

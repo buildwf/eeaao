@@ -64,7 +64,7 @@ export class ChangeRecorder {
     if (!def?.sync) return;
     const key = `${table}\u0000${id}`;
     const first = this.pending.get(key);
-    // The first write in this mutation knows the group the document started in.
+    // Decision: keep the group from the first write in this mutation, since it knows the group the document started in.
     const startGroup = first ? first.before : before ? def.sync.group(before) : null;
     this.pending.set(key, { table, id, before: startGroup, after });
   }
@@ -112,7 +112,7 @@ export function pull(storage: DataStorage, schema: Schema, groups: readonly stri
   );
   let more = rows.length > limit;
   let page = more ? rows.slice(0, limit) : rows;
-  // A page ends on a whole commit, so a device never stops halfway through one.
+  // Decision: a page ends on a whole commit, so a device never stops halfway through one.
   if (more && rows[limit]!.seq === page[page.length - 1]!.seq) {
     const last = page[page.length - 1]!.seq;
     const whole = page.filter((r) => r.seq < last);

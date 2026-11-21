@@ -10,8 +10,7 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
 
-// The wire protocol of a bwf live stream. See docs/live-protocol.md in the Realtime repository.
-// Nothing in this file touches the network.
+// Decision: the wire protocol is docs/live-protocol.md. Keep this file in step with it.
 
 /** One event the server delivered: something was published to a topic you subscribed to. */
 data class LiveEvent(

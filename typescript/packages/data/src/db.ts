@@ -283,8 +283,6 @@ export class Query<S extends Schema, T extends keyof S & string> {
   }
 }
 
-// --------------------------------------------------------------------------- schema sync
-
 const ftsTable = (table: string, index: string) => `fts_${ident(table, 'table')}_${ident(index, 'index')}`;
 const vecTable = (table: string, index: string) => `vec_${ident(table, 'table')}_${ident(index, 'index')}`;
 
@@ -294,8 +292,8 @@ const vecTable = (table: string, index: string) => `vec_${ident(table, 'table')}
  * documents; a changed or removed regular index is dropped by name hash.
  */
 export function syncSchema(storage: DataStorage, schema: Schema): void {
-  // A wake with the same schema as last time reads one row and stops. Measured on Crowded's schema (R0, 2026-11-21), the
-  // full pass read about 8,000 rows on each wake.
+  // Decision: a wake with the same schema as last time reads one row and stops. Measured on a real app's schema
+  // (2026-11-21), the full pass read about 8,000 rows on each wake.
   const signature = schemaSignature(schema);
   storage.transactionSync(() => {
     run(storage, `CREATE TABLE IF NOT EXISTS _meta (key TEXT PRIMARY KEY, value TEXT NOT NULL)`);
@@ -361,7 +359,6 @@ export function schemaSignature(schema: Schema): string {
   return `v1:${JSON.stringify(shape)}`;
 }
 
-/** Creates a derived table once, and rebuilds it when its definition changed. */
 function derived(storage: DataStorage, table: string, key: string, signature: string, name: string, build: () => void) {
   const metaKey = `${table}/${key}`;
   const stored = run<{ value: string }>(storage, `SELECT value FROM _meta WHERE key=?`, metaKey)[0]?.value;
@@ -370,8 +367,6 @@ function derived(storage: DataStorage, table: string, key: string, signature: st
   build();
   run(storage, `INSERT OR REPLACE INTO _meta (key,value) VALUES (?,?)`, metaKey, signature);
 }
-
-// --------------------------------------------------------------------------- helpers
 
 function stored(row: Row, doc: Record<string, unknown>): Record<string, unknown> {
   return { ...doc, _id: row._id, _creationTime: row._creationTime };

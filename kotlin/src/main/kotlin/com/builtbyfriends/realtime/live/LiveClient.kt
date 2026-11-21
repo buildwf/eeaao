@@ -53,7 +53,7 @@ class LiveClient(
     private val onUnauthorized: suspend () -> Unit = {},
     private val retryMillis: (attempt: Int) -> Long = ::liveBackoffMillis,
 ) {
-    // The server sends a keep-alive every 15 seconds, so a quiet minute means the connection is dead.
+    // Decision: the server sends a keep-alive every 15 seconds, so a quiet minute means the connection is dead.
     private val http = http.newBuilder().readTimeout(60, TimeUnit.SECONDS).build()
     private val url = url.toHttpUrl()
     private val connectionId = UUID.randomUUID().toString()
@@ -140,7 +140,6 @@ class LiveClient(
         }
     }
 
-    /** One connection, from open until it ends. It always ends by returning at end of stream or throwing. */
     private suspend fun listen(onOpen: () -> Unit) = withContext(Dispatchers.IO) {
         val call = http.newCall(
             Request.Builder()
@@ -169,7 +168,6 @@ class LiveClient(
                     ensureActive()
                     val line = source.readUtf8Line() ?: break
                     val event = parser.feed(line)?.let(SseParser::liveEvent) ?: continue
-                    // Pass on only what this client subscribed to, with the topic it subscribed with.
                     val held = subscriptions[event.subscriptionId]?.takeIf { it.topic == event.topic } ?: continue
                     event.eventId?.let { held.lastEventId = it }
                     eventsOut.emit(event)
@@ -186,7 +184,6 @@ class LiveClient(
         send(operations).filter { !it.ok }.forEach { rejectionsOut.tryEmit(it) }
     }
 
-    /** Sends operations in requests of at most 100, and returns every result. */
     private suspend fun send(operations: List<LiveControl.Operation>): List<LiveControl.Result> = withContext(Dispatchers.IO) {
         val results = mutableListOf<LiveControl.Result>()
         for (chunk in operations.chunked(LiveControl.MAX_OPERATIONS_PER_REQUEST)) {

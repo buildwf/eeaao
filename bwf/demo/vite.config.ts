@@ -1,11 +1,9 @@
 import { defineConfig } from 'vite';
 import { bwfPlugin } from '@builtbyfriends/bwf';
-// Published, this is: import { realtime } from '@builtbyfriends/realtime-bwf/plugin';
 import { realtime } from '../../typescript/packages/bwf/src/plugin.ts';
 
 export default defineConfig({
   plugins: [bwfPlugin(), realtime()],
-  // Only because the realtime packages aren't published yet: point at their source.
   resolve: {
     alias: aliases(),
     dedupe: ['@builtbyfriends/bwf', 'zod', 'hono', 'agents', '@modelcontextprotocol/server', '@standard-schema/spec'],

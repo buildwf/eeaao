@@ -24,9 +24,8 @@ export function createLiveHooks<R extends Typed>(live: Live<R>) {
     const topicsKey = stableKey(options.topics ?? null);
     const handle = useMemo(
       () => live.query(name, input, options),
-      // The input and topics are compared by value with sorted keys, so an inline object, or
+      // Decision: the input and topics are compared by value with sorted keys, so an inline object, or
       // the same object with its keys in another order, doesn't resubscribe.
-      // eslint-disable-next-line react-hooks/exhaustive-deps
       [name, stableKey(input), topicsKey, options.enabled],
     );
     const state = useSyncExternalStore(handle.subscribe, handle.getSnapshot, handle.getSnapshot);

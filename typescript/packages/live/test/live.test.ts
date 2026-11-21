@@ -71,7 +71,7 @@ describe('live store', () => {
     await flush();
     t.reconnect();
     await flush();
-    expect(call).toHaveBeenCalledTimes(1); // first still in flight, second queued
+    expect(call).toHaveBeenCalledTimes(1);
     gates[0]!();
     await flush();
     expect(call).toHaveBeenCalledTimes(2);

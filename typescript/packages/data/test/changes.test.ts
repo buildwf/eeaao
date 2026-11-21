@@ -73,7 +73,6 @@ describe('change index', () => {
     await m('edit', { id, room: 'b' });
     expect(engine.pull(['room:a'], 1).changes).toEqual([{ table: 'notes', id, group: 'room:a', doc: null }]);
     expect(engine.pull(['room:b'], 0).changes[0]!.doc).toMatchObject({ room: 'b' });
-    // A fresh load leaves delete markers out.
     expect(engine.pull(['room:a'], 0).changes).toEqual([]);
   });
 

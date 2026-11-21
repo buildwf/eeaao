@@ -13,7 +13,6 @@ export const data = defineData({
   }),
   functions: ({ query, mutation }) => ({
     send: mutation((ctx, a: { channel: string; author: string; body: string }) => ctx.db.insert('messages', { ...a, at: ctx.now })),
-    // Two writes and a scheduled job: all commit together or not at all.
     sendWithReminder: mutation((ctx, a: { channel: string; author: string; body: string; remindInMs: number }) => {
       const id = ctx.db.insert('messages', { channel: a.channel, author: a.author, body: a.body, at: ctx.now });
       const job = ctx.scheduler.runAfter(a.remindInMs, 'remind', { channel: a.channel, about: id });

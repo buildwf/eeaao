@@ -1,7 +1,7 @@
 import { bearerAuth, createProcedures, type Registry } from '@builtbyfriends/realtime';
 
 declare global {
-  // bwf generates this from bwf.config.ts and your imports (.bwf/bindings.d.ts).
+  // Decision: empty here. bwf fills it in from bwf.config.ts and your imports (.bwf/bindings.d.ts).
   interface BwfGeneratedEnvBindings {}
 }
 
@@ -16,7 +16,6 @@ const sha256 = async (text: string) =>
 /**
  * API tokens for the CLI, agents and scripts: `Authorization: Bearer <token>`. Only a
  * SHA-256 hash is stored. `lookup` gets the hash and returns the caller or null.
- * (A Better Auth session and API-key provider is the next step; see PLAN.md.)
  */
 export function apiTokens<User extends { id: string }>(lookup: (hash: string) => Promise<User | null | undefined> | User | null | undefined) {
   return bearerAuth<User, BwfEnv>({

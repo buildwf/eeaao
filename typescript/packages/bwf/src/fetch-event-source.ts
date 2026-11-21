@@ -70,7 +70,7 @@ export function fetchEventSource(options: FetchEventSourceOptions): FetchEventSo
           if (done) break;
           this.#emit(value.event || 'message', { data: value.data });
         }
-        this.#emit('error'); // the server ended the stream
+        this.#emit('error');
       } catch (error) {
         this.#emit('error', { error });
       }

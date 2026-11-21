@@ -5,7 +5,6 @@ import { publishTopics, topicPolicy } from '../src/data.js';
 import { bwfTransport, fetchEventSource, type ConnectLiveStream } from '../src/live.js';
 import { memoryStorage } from '../../data/test/storage.js';
 
-/** A stand-in for bwf's live stream: topic pub/sub, plus EventSource opens it can trigger. */
 function fakeHost() {
   const subs = new Map<string, Map<string, (event: any) => void>>();
   let sources: any[] = [];
@@ -73,7 +72,7 @@ describe('bwfTransport', () => {
     await t.subscribe('x', () => {});
     await Promise.resolve();
     expect(reconnected).not.toHaveBeenCalled();
-    v.sources()[0].dispatch('open'); // the stream dropped and bwf's client opened it again
+    v.sources()[0].dispatch('open');
     expect(reconnected).toHaveBeenCalledTimes(1);
   });
 });

@@ -3,23 +3,19 @@ import { anyOf, bearerAuth, createProcedures } from '@builtbyfriends/realtime';
 
 export type User = { id: string; orgId: string; role: 'admin' | 'member' };
 export type Env = {
-  /** JSON map of API token to user. A real app would look tokens up in D1 or KV. */
   API_TOKENS: string;
   ANALYTICS: { writeDataPoint(p: unknown): void };
 };
 
 const { procedure, profile } = createProcedures<Env>();
 
-// --- auth providers -------------------------------------------------------
 const apiToken = bearerAuth<User, Env>({
   name: 'api-token',
   verify: (token, env) => (JSON.parse(env.API_TOKENS) as Record<string, User>)[token] ?? null,
   actorId: (u) => u.id,
 });
-// Sessions would be a second provider; the CLI and agents use tokens.
 const session = anyOf('session-or-token', apiToken);
 
-// --- data (in memory for the example) -------------------------------------
 const Contact = z.object({ id: z.string(), orgId: z.string(), name: z.string(), email: z.email() });
 type Contact = z.infer<typeof Contact>;
 const contacts = new Map<string, Contact>([
@@ -28,8 +24,6 @@ const contacts = new Map<string, Contact>([
   ['c3', { id: 'c3', orgId: 'o2', name: 'Grace Hopper', email: 'grace@example.com' }],
 ]);
 
-// --- profiles ---------------------------------------------------------------
-/** Org-scoped procedures: signed in, and the input's orgId must be the caller's. */
 const orgMember = profile('org-member').auth(session);
 
 const adminOnly = profile('admin-only')
@@ -37,7 +31,6 @@ const adminOnly = profile('admin-only')
   .authz({ policy: 'admin', check: (user) => user.role === 'admin' })
   .noCli({ reason: 'Admin actions ship through the dashboard only' });
 
-// --- procedures -------------------------------------------------------------
 export const getContact = procedure('contacts.get')
   .use(orgMember)
   .input(z.object({ orgId: z.string().describe('Organization id'), id: z.string().describe('Contact id') }))
