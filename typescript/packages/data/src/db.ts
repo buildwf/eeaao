@@ -1,5 +1,6 @@
 import { bindable, fieldSql, hash, ident, run, type DataStorage } from './storage.js';
 import type { Doc, NewDoc, Schema, TableDef } from './schema.js';
+import { ChangeRecorder } from './changes.js';
 
 const SYSTEM = new Set(['_id', '_creationTime']);
 
@@ -94,10 +95,13 @@ export class DbReader<S extends Schema> {
 export class Db<S extends Schema> extends DbReader<S> {
   /** @internal Topics touched by this call, published after the commit. */
   readonly touched = new Set<string>();
+  /** @internal Changes to synced tables, written to the change index at the end of the mutation. */
+  readonly changes: ChangeRecorder;
 
   /** @internal */
   constructor(storage: DataStorage, schema: S) {
     super(storage, schema);
+    this.changes = new ChangeRecorder(schema);
   }
 
   /** Adds an extra live topic for this call, on top of the table topics. */
@@ -109,9 +113,11 @@ export class Db<S extends Schema> extends DbReader<S> {
     const def = this.def(table);
     const doc = checked(def, value);
     const id = crypto.randomUUID();
-    run(this.storage, `INSERT INTO t_${table} (_id,_creationTime,doc) VALUES (?,?,?)`, id, Date.now(), JSON.stringify(doc));
+    const creationTime = Date.now();
+    run(this.storage, `INSERT INTO t_${table} (_id,_creationTime,doc) VALUES (?,?,?)`, id, creationTime, JSON.stringify(doc));
     const rowid = run<{ _rowid: number }>(this.storage, `SELECT _rowid FROM t_${table} WHERE _id=?`, id)[0]!._rowid;
     this.reindex(table, def, rowid, doc);
+    if (def.sync) this.changes.record(table, id, null, { ...doc, _id: id, _creationTime: creationTime });
     this.touchDoc(table, id, def, doc);
     return id;
   }
@@ -137,6 +143,7 @@ export class Db<S extends Schema> extends DbReader<S> {
     const { def, row, old } = this.load(table, id);
     run(this.storage, `DELETE FROM t_${table} WHERE _rowid=?`, row._rowid);
     this.unindex(table, def, row._rowid);
+    if (def.sync) this.changes.record(table, id, stored(row, old), null);
     this.touchDoc(table, id, def, old);
   }
 
@@ -151,6 +158,7 @@ export class Db<S extends Schema> extends DbReader<S> {
     run(this.storage, `UPDATE t_${table} SET doc=? WHERE _rowid=?`, JSON.stringify(next), row._rowid);
     this.unindex(table, def, row._rowid);
     this.reindex(table, def, row._rowid, next);
+    if (def.sync) this.changes.record(table, row._id, stored(row, old), stored(row, next));
     this.touchDoc(table, row._id, def, old);
     this.touchDoc(table, row._id, def, next);
   }
@@ -364,6 +372,10 @@ function derived(storage: DataStorage, table: string, key: string, signature: st
 }
 
 // --------------------------------------------------------------------------- helpers
+
+function stored(row: Row, doc: Record<string, unknown>): Record<string, unknown> {
+  return { ...doc, _id: row._id, _creationTime: row._creationTime };
+}
 
 function toDoc(row: Row): any {
   return { ...JSON.parse(row.doc), _id: row._id, _creationTime: row._creationTime };

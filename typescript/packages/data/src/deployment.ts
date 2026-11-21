@@ -1,4 +1,5 @@
 import { Db, DbReader, syncSchema } from './db.js';
+import { pull, syncChanges, type ChangeBatch, type PullResult } from './changes.js';
 import { Scheduler, syncJobs, type ScheduledJob } from './scheduler.js';
 import type { Schema } from './schema.js';
 import type { DataStorage } from './storage.js';
@@ -60,13 +61,19 @@ export type DataDefinition<S extends Schema, F extends Record<string, AnyFn>, J 
    * refetch on reconnect anyway.
    */
   onCommit?: (topics: string[], env: any) => void | Promise<void>;
+  /**
+   * Called after a mutation commits, with what changed in synced tables (`sync` on the table): one position for the
+   * commit and each document as devices see it. Send it to the devices in those groups. Like `onCommit`, it's started and
+   * not awaited, and devices that miss it catch up with `pull`.
+   */
+  onChanges?: (batch: ChangeBatch, env: any) => void | Promise<void>;
   /** Attempts per job before it is parked as failed. Default 5. */
   maxJobAttempts?: number;
   /** How long a plain job may hold the one-at-a-time lane before the next one starts beside it. Default 120000 (two minutes). */
   laneMs?: number;
 };
 
-type Stub = { run(kind: string, name: string, args: unknown): Promise<any>; job(id: string): Promise<ScheduledJob | null> };
+type Stub = { run(kind: string, name: string, args: unknown): Promise<any>; job(id: string): Promise<ScheduledJob | null>; pull(groups: string[], after: number, limit?: number): Promise<PullResult> };
 type Namespace = { idFromName(name: string): unknown; get(id: any): any };
 
 export type Data<S extends Schema, F extends Record<string, AnyFn>, _J extends Record<string, JobFn<F>>> = {
@@ -87,6 +94,8 @@ export type Data<S extends Schema, F extends Record<string, AnyFn>, _J extends R
 
 export interface DataObject {
   run(kind: 'query' | 'mutation', name: string, args: unknown): Promise<unknown>;
+  /** What changed in these sync groups after `after`. Check the caller may read each group before calling. */
+  pull(groups: string[], after: number, limit?: number): Promise<PullResult>;
   job(id: string): Promise<ScheduledJob | null>;
   alarm(): Promise<void>;
 }
@@ -122,6 +131,9 @@ export function defineData<S extends Schema, F extends Record<string, AnyFn>, J 
         job(id: string) {
           return Promise.resolve(this.#engine.scheduler().get(id));
         }
+        pull(groups: string[], after: number, limit?: number) {
+          return Promise.resolve(this.#engine.pull(groups, after, limit));
+        }
         alarm() {
           return this.#engine.alarm();
         }
@@ -143,6 +155,7 @@ type Resolved = {
   functions: Record<string, AnyFn>;
   jobs: Record<string, JobFn<any>>;
   onCommit?: (topics: string[], env: any) => void | Promise<void>;
+  onChanges?: (batch: ChangeBatch, env: any) => void | Promise<void>;
   maxJobAttempts?: number;
   laneMs?: number;
 };
@@ -158,6 +171,12 @@ export class Engine {
   init(): void {
     syncSchema(this.storage, this.def.schema);
     syncJobs(this.storage);
+    syncChanges(this.storage);
+  }
+
+  /** What changed in these sync groups after position `after`. */
+  pull(groups: readonly string[], after: number, limit?: number): PullResult {
+    return pull(this.storage, this.def.schema, groups, after, limit);
   }
 
   scheduler(): Scheduler {
@@ -172,8 +191,13 @@ export class Engine {
     const db = new Db(this.storage, this.def.schema);
     const scheduler = this.scheduler();
     // One SQLite transaction: a throw rolls back every write and every scheduled job.
-    const result = this.storage.transactionSync(() => fn.run({ db, scheduler, env: this.env, now: Date.now() }, args));
-    await this.afterCommit(db.touched, scheduler.changed);
+    let batch: ChangeBatch | null = null;
+    const result = this.storage.transactionSync(() => {
+      const out = fn.run({ db, scheduler, env: this.env, now: Date.now() }, args);
+      batch = db.changes.flush(this.storage);
+      return out;
+    });
+    await this.afterCommit(db.touched, scheduler.changed, batch);
     return result;
   }
 
@@ -239,8 +263,15 @@ export class Engine {
     return { query: call('query'), mutate: call('mutation'), job: async (id: string) => this.scheduler().get(id) } as DataClient<any>;
   }
 
-  private async afterCommit(touched: Set<string>, queueChanged: boolean): Promise<void> {
+  private async afterCommit(touched: Set<string>, queueChanged: boolean, batch: ChangeBatch | null = null): Promise<void> {
     if (queueChanged) await this.arm(this.scheduler());
+    if (batch && this.def.onChanges) {
+      const onChanges = this.def.onChanges;
+      const changes = batch;
+      void Promise.resolve()
+        .then(() => onChanges(changes, this.env))
+        .catch((e) => console.error('onChanges failed', e));
+    }
     if (touched.size && this.def.onCommit) {
       const onCommit = this.def.onCommit;
       // Started, not awaited: see `onCommit` in DataDefinition.
