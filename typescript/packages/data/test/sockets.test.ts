@@ -54,3 +54,75 @@ describe('sync sockets', () => {
     expect(sockets.message(a, 'not json')).toBe(false);
   });
 });
+
+describe('watching groups', () => {
+  type Note = { room: string; text: string; likes: string[] };
+  const schema = defineSchema({
+    notes: table<Note>({
+      sync: { group: (n) => `room:${n.room}`, view: (n, { actor }) => (n.room === 'secret' ? null : { text: n.text, mine: n.likes.includes(actor) }) },
+    }),
+    members: table<{ room: string; user: string }>({ indexes: { by_user: ['user', 'room'] } }),
+  });
+
+  function setup() {
+    const data = defineData({
+      schema,
+      functions: ({ mutation }) => ({
+        add: mutation((ctx, a: Note) => ctx.db.insert('notes', a)),
+        join: mutation((ctx, a: { room: string; user: string }) => void ctx.db.insert('members', a)),
+        leave: mutation((ctx, a: { room: string; user: string }) => {
+          const row = ctx.db.query('members').withIndex('by_user', (q) => q.eq('user', a.user).eq('room', a.room)).first();
+          if (row) ctx.db.delete('members', row._id);
+        }),
+      }),
+      syncAccess: (ctx, actor, group) => !!ctx.db.query('members').withIndex('by_user', (q) => q.eq('user', actor).eq('room', group.slice(5))).first(),
+      syncRecheck: (topics) => topics.includes('members'),
+    });
+    const engine = data.engine(memoryStorage());
+    engine.init();
+    const all: { tags: string[]; ws: ReturnType<typeof fakeSocket> }[] = [];
+    const state = {
+      acceptWebSocket: (ws: any, tags: string[] = []) => void all.push({ ws, tags }),
+      getWebSockets: (tag?: string) => all.filter((s) => !tag || s.tags.includes(tag)).map((s) => s.ws),
+    };
+    const sockets = new SyncSockets(state, { pull: (_a, g, after, l) => engine.pull(g, after, l), view: (a, c) => engine.view(a, c), access: (a, g) => engine.access(a, g) });
+    engine.listen((batch) => sockets.broadcast(batch));
+    engine.onRecheck(() => sockets.recheck());
+    const m = (name: string, args: unknown) => engine.run('mutation', name, args);
+    return { sockets, m };
+  }
+
+  it('lets a device watch only the groups it may read, and sends each reader its own view', async () => {
+    const { sockets, m } = setup();
+    await m('join', { room: 'x', user: 'ann' });
+    await m('add', { room: 'x', text: 'before', likes: ['ann'] });
+    const a = fakeSocket();
+    sockets.accept(a, { actor: 'ann', groups: [] });
+    sockets.message(a, JSON.stringify({ type: 'watch', groups: ['room:x', 'room:y'], id: 1 }));
+    expect(a.sent[0]).toEqual({ type: 'watching', id: 1, groups: ['room:x'], denied: ['room:y'], seq: 1, changes: [], more: false });
+    await m('add', { room: 'x', text: 'hi', likes: ['bo'] });
+    await m('add', { room: 'y', text: 'not yours', likes: [] });
+    expect(a.sent[1]).toMatchObject({ type: 'changes', seq: 2, changes: [{ group: 'room:x', doc: { text: 'hi', mine: false } }] });
+    expect(a.sent).toHaveLength(2);
+    sockets.message(a, JSON.stringify({ type: 'watch', groups: ['room:x'], after: 0, id: 2 }));
+    expect(a.sent[2]).toMatchObject({ type: 'watching', id: 2, seq: 3, changes: [{ doc: { text: 'before', mine: true } }, { doc: { text: 'hi' } }] });
+    sockets.message(a, JSON.stringify({ type: 'unwatch', groups: ['room:x'] }));
+    await m('add', { room: 'x', text: 'after', likes: [] });
+    expect(a.sent).toHaveLength(3);
+  });
+
+  it('drops a group once the reader loses access, and leaves out what a view hides', async () => {
+    const { sockets, m } = setup();
+    await m('join', { room: 'x', user: 'ann' });
+    await m('join', { room: 'secret', user: 'ann' });
+    const a = fakeSocket();
+    sockets.accept(a, { actor: 'ann', groups: [] });
+    sockets.message(a, JSON.stringify({ type: 'watch', groups: ['room:x', 'room:secret'], id: 1 }));
+    await m('add', { room: 'secret', text: 'hidden', likes: [] });
+    expect(a.sent).toHaveLength(1);
+    await m('leave', { room: 'x', user: 'ann' });
+    expect(a.sent[1]).toEqual({ type: 'groups', added: [], removed: ['room:x'] });
+    await m('add', { room: 'x', text: 'gone', likes: [] });
+    expect(a.sent).toHaveLength(2);
+  });
+});

@@ -1,5 +1,5 @@
 import { Db, DbReader, syncSchema } from './db.js';
-import { pull, syncChanges, type ChangeBatch, type PullResult } from './changes.js';
+import { pull, syncChanges, type Change, type ChangeBatch, type PullResult } from './changes.js';
 import { SyncSockets, type SocketIdentity } from './sockets.js';
 
 /** The header the door sets on a sync socket request: JSON `{ actor, groups }`. See `syncRequest`. */
@@ -75,6 +75,16 @@ export type DataDefinition<S extends Schema, F extends Record<string, AnyFn>, J 
    * not awaited, and devices that miss it catch up with `pull`.
    */
   onChanges?: (batch: ChangeBatch, env: any) => void | Promise<void>;
+  /**
+   * Whether `actor` may read sync group `group`. A device asks to watch groups as it moves around (an open channel), and
+   * the object checks each one here. Without it, devices read only the groups the door gave them.
+   */
+  syncAccess?: (ctx: QueryCtx<S>, actor: string, group: string) => boolean;
+  /**
+   * Whether a commit may have changed who can read what, from the topics it touched (a member left, a channel went
+   * private). When it says yes, each open socket's groups are checked again with `syncAccess`.
+   */
+  syncRecheck?: (topics: string[]) => boolean;
   /** Attempts per job before it is parked as failed. Default 5. */
   maxJobAttempts?: number;
   /** How long a plain job may hold the one-at-a-time lane before the next one starts beside it. Default 120000 (two minutes). */
@@ -129,9 +139,14 @@ export function defineData<S extends Schema, F extends Record<string, AnyFn>, J 
         constructor(...args: any[]) {
           super(...args);
           const [ctx, env] = args as [{ storage: DataStorage; blockConcurrencyWhile<T>(fn: () => Promise<T>): Promise<T> } & ConstructorParameters<typeof SyncSockets>[0], unknown];
-          this.#engine = engine(ctx.storage, env);
-          this.#sockets = new SyncSockets(ctx, (groups, after, limit) => this.#engine.pull(groups, after, limit));
+          const own = (this.#engine = engine(ctx.storage, env));
+          this.#sockets = new SyncSockets(ctx, {
+            pull: (_actor, groups, after, limit) => own.pull(groups, after, limit),
+            view: (actor, changes) => own.view(actor, changes),
+            access: (actor, groups) => own.access(actor, groups),
+          });
           this.#engine.listen((batch) => this.#sockets.broadcast(batch));
+          this.#engine.onRecheck(() => this.#sockets.recheck());
           // Decision: schema sync is synchronous, but block anyway so no request sees a half-built table.
           void ctx.blockConcurrencyWhile(async () => {
             this.#engine.init();
@@ -195,6 +210,8 @@ type Resolved = {
   jobs: Record<string, JobFn<any>>;
   onCommit?: (topics: string[], env: any) => void | Promise<void>;
   onChanges?: (batch: ChangeBatch, env: any) => void | Promise<void>;
+  syncAccess?: (ctx: QueryCtx<any>, actor: string, group: string) => boolean;
+  syncRecheck?: (topics: string[]) => boolean;
   maxJobAttempts?: number;
   laneMs?: number;
 };
@@ -208,10 +225,52 @@ export class Engine {
   ) {}
 
   private readonly listeners: ((batch: ChangeBatch) => void)[] = [];
+  private readonly rechecks: (() => void)[] = [];
 
   /** @internal Called after each commit that touched synced tables, before `onChanges`. */
   listen(fn: (batch: ChangeBatch) => void): void {
     this.listeners.push(fn);
+  }
+
+  /** @internal Called after a commit that `syncRecheck` says may have changed who can read what. */
+  onRecheck(fn: () => void): void {
+    this.rechecks.push(fn);
+  }
+
+  private reader(): QueryCtx<any> {
+    return { db: new DbReader(this.storage, this.def.schema), env: this.env, now: Date.now() };
+  }
+
+  /** The changes as `actor` sees them, through each table's `sync.view`. A view that returns null leaves the change out. */
+  view(actor: string, changes: Change[]): Change[] {
+    if (!changes.some((c) => c.doc && this.def.schema[c.table]?.sync?.view)) return changes;
+    const ctx = { ...this.reader(), actor };
+    const out: Change[] = [];
+    for (const c of changes) {
+      const view = this.def.schema[c.table]?.sync?.view;
+      if (!c.doc || !view) {
+        out.push(c);
+        continue;
+      }
+      const doc = ctx.db.get(c.table as never, c.id) as Record<string, unknown> | null;
+      const seen = doc ? view(doc as never, ctx) : null;
+      if (seen !== null && seen !== undefined) out.push({ ...c, doc: seen as Record<string, unknown> });
+    }
+    return out;
+  }
+
+  /** The groups out of `groups` that `actor` may read, by `syncAccess`. None without it. */
+  access(actor: string, groups: string[]): string[] {
+    const check = this.def.syncAccess;
+    if (!check) return [];
+    const ctx = this.reader();
+    return groups.filter((g) => {
+      try {
+        return check(ctx, actor, g);
+      } catch {
+        return false;
+      }
+    });
   }
 
   init(): void {
@@ -316,6 +375,13 @@ export class Engine {
         fn(batch);
       } catch (e) {
         console.error('change listener failed', e);
+      }
+    }
+    if (touched.size && this.rechecks.length && this.def.syncRecheck?.([...touched])) for (const fn of this.rechecks) {
+      try {
+        fn();
+      } catch (e) {
+        console.error('sync recheck failed', e);
       }
     }
     if (batch && this.def.onChanges) {

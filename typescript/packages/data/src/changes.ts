@@ -1,5 +1,6 @@
 import { run, type DataStorage } from './storage.js';
 import type { Schema, TableDef } from './schema.js';
+import type { DbReader } from './db.js';
 
 /**
  * The change index: for each synced document, the position of its latest change and the group it's in. It's an index,
@@ -29,7 +30,16 @@ export type SyncDef<D = any> = {
   group: (doc: D) => string | null;
   /** The fields a device gets. Leave it out to send every field. `_id` and `_creationTime` are always sent. */
   fields?: readonly (keyof D & string)[];
+  /**
+   * The document as one reader sees it, when that depends on who they are (their own reactions) or on other records
+   * (names, a reply's original). It runs once per reader for each change they get, so keep its reads few. Return null to
+   * leave the change out for that reader. Leave it out to send the visible fields to everyone.
+   */
+  view?: (doc: D, reader: SyncReader) => unknown;
 };
+
+/** What a `view` gets: read access and who's reading. `actor` is what the door said the caller is. */
+export type SyncReader = { db: DbReader<any>; actor: string; now: number };
 
 export function syncChanges(storage: DataStorage): void {
   run(storage, `CREATE TABLE IF NOT EXISTS _changes (tbl TEXT NOT NULL, id TEXT NOT NULL, grp TEXT NOT NULL, seq INTEGER NOT NULL, deleted INTEGER NOT NULL, PRIMARY KEY (tbl, id, grp)) WITHOUT ROWID`);
