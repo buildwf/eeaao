@@ -286,8 +286,12 @@ const vecTable = (table: string, index: string) => `vec_${ident(table, 'table')}
  * documents; a changed or removed regular index is dropped by name hash.
  */
 export function syncSchema(storage: DataStorage, schema: Schema): void {
+  // A wake with the same schema as last time reads one row and stops. Measured on Crowded's schema (R0, 2026-11-21), the
+  // full pass read about 8,000 rows on each wake.
+  const signature = schemaSignature(schema);
   storage.transactionSync(() => {
     run(storage, `CREATE TABLE IF NOT EXISTS _meta (key TEXT PRIMARY KEY, value TEXT NOT NULL)`);
+    if (run<{ value: string }>(storage, `SELECT value FROM _meta WHERE key='schema'`)[0]?.value === signature) return;
     for (const [table, def] of Object.entries(schema)) {
       ident(table, 'table');
       run(
@@ -339,7 +343,14 @@ export function syncSchema(storage: DataStorage, schema: Schema): void {
         });
       }
     }
+    run(storage, `INSERT OR REPLACE INTO _meta (key,value) VALUES ('schema',?)`, signature);
   });
+}
+
+/** What `syncSchema` builds from: tables, indexes, search and vectors. Validators and topic functions don't change tables. */
+export function schemaSignature(schema: Schema): string {
+  const shape = Object.entries(schema).map(([table, def]) => [table, def.indexes ?? {}, def.search ?? {}, def.vectors ?? {}]);
+  return `v1:${JSON.stringify(shape)}`;
 }
 
 /** Creates a derived table once, and rebuilds it when its definition changed. */

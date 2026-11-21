@@ -117,6 +117,25 @@ describe('documents and indexes', () => {
   });
 });
 
+describe('schema sync', () => {
+  it('skips the pass on a wake with the same schema, and runs it when the schema changed', async () => {
+    const { syncSchema } = await import('../src/index.js');
+    const { storage } = setup();
+    const statements: string[] = [];
+    const exec = storage.sql.exec.bind(storage.sql);
+    storage.sql.exec = (query: string, ...bindings: unknown[]) => (statements.push(query), exec(query, ...bindings));
+    syncSchema(storage, schema);
+    expect(statements).toHaveLength(2);
+    statements.length = 0;
+    const changed = defineSchema({ messages: table<Message>({ ...schema.messages, indexes: { ...schema.messages.indexes, by_author: ['author'] } }) });
+    syncSchema(storage, changed);
+    expect(statements.some((q) => q.includes('by_author'))).toBe(true);
+    statements.length = 0;
+    syncSchema(storage, changed);
+    expect(statements).toHaveLength(2);
+  });
+});
+
 describe('search and vectors', () => {
   it('ranks full text matches, matches prefixes, filters by channel, and follows edits and deletes', async () => {
     const { call } = setup();
