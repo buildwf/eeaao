@@ -26,8 +26,11 @@ export type PullResult = ChangeBatch & {
 
 /** Declares that a table syncs to devices: which group each document is in, and which fields a device may see. */
 export type SyncDef<D = any> = {
-  /** The group a document belongs to, or null to keep it off devices. */
-  group: (doc: D) => string | null;
+  /**
+   * The group a document belongs to, or null to keep it off devices. A document several readers share, such as a chat
+   * between people, can be in more than one group: one per reader.
+   */
+  group: (doc: D) => string | readonly string[] | null;
   /** The fields a device gets. Leave it out to send every field. `_id` and `_creationTime` are always sent. */
   fields?: readonly (keyof D & string)[];
   /**
@@ -60,7 +63,12 @@ export function visible(def: TableDef, doc: Record<string, unknown>): Record<str
   return out;
 }
 
-type Pending = { table: string; id: string; before: string | null; after: Record<string, unknown> | null };
+type Pending = { table: string; id: string; before: string[]; after: Record<string, unknown> | null };
+
+function groupsOf(def: TableDef, doc: Record<string, unknown> | null): string[] {
+  const g = doc ? def.sync!.group(doc) : null;
+  return g === null ? [] : typeof g === 'string' ? [g] : [...new Set(g)];
+}
 
 /** Collects one mutation's changes to synced tables, and writes them to the index inside its transaction. */
 export class ChangeRecorder {
@@ -75,7 +83,7 @@ export class ChangeRecorder {
     const key = `${table}\u0000${id}`;
     const first = this.pending.get(key);
     // Decision: keep the group from the first write in this mutation, since it knows the group the document started in.
-    const startGroup = first ? first.before : before ? def.sync.group(before) : null;
+    const startGroup = first ? first.before : groupsOf(def, before);
     this.pending.set(key, { table, id, before: startGroup, after });
   }
 
@@ -94,9 +102,12 @@ export class ChangeRecorder {
     };
     for (const p of this.pending.values()) {
       const def = this.schema[p.table]!;
-      const group = p.after ? def.sync!.group(p.after) : null;
-      if (p.before !== null && p.before !== group) put(p.table, p.id, p.before, null);
-      if (group !== null) put(p.table, p.id, group, visible(def, p.after!));
+      const groups = groupsOf(def, p.after);
+      for (const g of p.before) if (!groups.includes(g)) put(p.table, p.id, g, null);
+      if (groups.length) {
+        const doc = visible(def, p.after!);
+        for (const g of groups) put(p.table, p.id, g, doc);
+      }
     }
     this.pending.clear();
     if (!changes.length) return null;

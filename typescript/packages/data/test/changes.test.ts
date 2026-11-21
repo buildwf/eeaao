@@ -104,3 +104,25 @@ describe('change index', () => {
     expect(rest.changes.map((c) => c.doc?.text)).toEqual(['n2', 'n3', 'n4']);
   });
 });
+
+describe('documents in several groups', () => {
+  const schema = defineSchema({ chats: table<{ people: string[]; text: string }>({ sync: { group: (c) => c.people.map((p) => `user:${p}`) } }) });
+  const data = defineData({
+    schema,
+    functions: ({ mutation }) => ({
+      add: mutation((ctx, a: { people: string[]; text: string }) => ctx.db.insert('chats', a)),
+      set: mutation((ctx, a: { id: string; people: string[] }) => void ctx.db.patch('chats', a.id, { people: a.people })),
+    }),
+  });
+
+  it('puts a shared document in each reader group, and leaves a delete marker for one who leaves', async () => {
+    const engine = data.engine(memoryStorage());
+    engine.init();
+    const id = (await engine.run('mutation', 'add', { people: ['ann', 'bo'], text: 'hi' })) as string;
+    expect(engine.pull(['user:ann'], 0).changes).toHaveLength(1);
+    expect(engine.pull(['user:bo'], 0).changes).toHaveLength(1);
+    await engine.run('mutation', 'set', { id, people: ['ann'] });
+    expect(engine.pull(['user:bo'], 1).changes).toEqual([{ table: 'chats', id, group: 'user:bo', doc: null }]);
+    expect(engine.pull(['user:ann'], 1).changes[0]!.doc).toMatchObject({ people: ['ann'] });
+  });
+});
